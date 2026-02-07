@@ -1,91 +1,361 @@
 service,category,month,total_seats,active_seats,monthly_cost
-Slack,Communication,2025-01,55,48,1426
-Slack,Communication,2025-02,55,49,1430
-Slack,Communication,2025-03,55,50,1422
-Slack,Communication,2025-04,55,51,1425
-Slack,Communication,2025-05,55,52,1422
-Slack,Communication,2025-06,55,53,1417
-Microsoft Teams,Communication,2025-01,55,38,1100
-Microsoft Teams,Communication,2025-02,55,32,1100
-Microsoft Teams,Communication,2025-03,55,26,1100
-Microsoft Teams,Communication,2025-04,55,20,1100
-Microsoft Teams,Communication,2025-05,55,14,1100
-Microsoft Teams,Communication,2025-06,55,8,1100
-Google Workspace,Productivity,2025-01,55,54,1660
-Google Workspace,Productivity,2025-02,55,56,1678
-Google Workspace,Productivity,2025-03,55,53,1618
-Google Workspace,Productivity,2025-04,55,56,1680
-Google Workspace,Productivity,2025-05,55,56,1600
-Google Workspace,Productivity,2025-06,55,54,1603
-Notion,Productivity,2025-01,45,31,872
-Notion,Productivity,2025-02,45,29,914
-Notion,Productivity,2025-03,45,31,873
-Notion,Productivity,2025-04,45,30,891
-Notion,Productivity,2025-05,45,28,861
-Notion,Productivity,2025-06,45,32,949
-GitHub Enterprise,Developer Tools,2025-01,20,18,1278
-GitHub Enterprise,Developer Tools,2025-02,20,19,1236
-GitHub Enterprise,Developer Tools,2025-03,20,17,1234
-GitHub Enterprise,Developer Tools,2025-04,20,16,1220
-GitHub Enterprise,Developer Tools,2025-05,20,17,1299
-GitHub Enterprise,Developer Tools,2025-06,20,20,1266
-Figma,Design,2025-01,40,22,1800
-Figma,Design,2025-02,40,18,1800
-Figma,Design,2025-03,40,14,1800
-Figma,Design,2025-04,40,10,1800
-Figma,Design,2025-05,40,7,1800
-Figma,Design,2025-06,40,6,1800
-AWS (Production),Cloud Infrastructure,2025-01,,,18751
-AWS (Production),Cloud Infrastructure,2025-02,,,18648
-AWS (Production),Cloud Infrastructure,2025-03,,,19042
-AWS (Production),Cloud Infrastructure,2025-04,,,19527
-AWS (Production),Cloud Infrastructure,2025-05,,,20016
-AWS (Production),Cloud Infrastructure,2025-06,,,20139
-AWS (Dev/Staging),Cloud Infrastructure,2025-01,,,3124
-AWS (Dev/Staging),Cloud Infrastructure,2025-02,,,3247
-AWS (Dev/Staging),Cloud Infrastructure,2025-03,,,4480
-AWS (Dev/Staging),Cloud Infrastructure,2025-04,,,5760
-AWS (Dev/Staging),Cloud Infrastructure,2025-05,,,6720
-AWS (Dev/Staging),Cloud Infrastructure,2025-06,,,7359
-Snowflake,Data Platform,2025-01,15,11,4218
-Snowflake,Data Platform,2025-02,15,13,4426
-Snowflake,Data Platform,2025-03,15,12,4379
-Snowflake,Data Platform,2025-04,15,13,4591
-Snowflake,Data Platform,2025-05,15,13,4802
-Snowflake,Data Platform,2025-06,15,12,4761
-Looker,Analytics,2025-01,30,18,2400
-Looker,Analytics,2025-02,30,14,2400
-Looker,Analytics,2025-03,30,20,2400
-Looker,Analytics,2025-04,30,5,2400
-Looker,Analytics,2025-05,30,0,2400
-Looker,Analytics,2025-06,30,0,2400
-Salesforce,CRM,2025-01,15,15,3796
-Salesforce,CRM,2025-02,15,16,3777
-Salesforce,CRM,2025-03,15,16,3731
-Salesforce,CRM,2025-04,15,13,3773
-Salesforce,CRM,2025-05,15,15,3751
-Salesforce,CRM,2025-06,15,13,3798
-HubSpot,Marketing,2025-01,12,11,1391
-HubSpot,Marketing,2025-02,12,8,1396
-HubSpot,Marketing,2025-03,12,11,1470
-HubSpot,Marketing,2025-04,12,8,1485
-HubSpot,Marketing,2025-05,12,10,1487
-HubSpot,Marketing,2025-06,12,11,1405
-Okta,Identity,2025-01,55,55,1389
-Okta,Identity,2025-02,55,57,1413
-Okta,Identity,2025-03,55,56,1332
-Okta,Identity,2025-04,55,56,1413
-Okta,Identity,2025-05,55,53,1343
-Okta,Identity,2025-06,55,55,1392
-Miro,Collaboration,2025-01,35,12,700
-Miro,Collaboration,2025-02,35,12,700
-Miro,Collaboration,2025-03,35,8,700
-Miro,Collaboration,2025-04,35,3,700
-Miro,Collaboration,2025-05,35,0,700
-Miro,Collaboration,2025-06,35,0,700
-Loom,Communication,2025-01,25,8,375
-Loom,Communication,2025-02,25,7,375
-Loom,Communication,2025-03,25,4,375
-Loom,Communication,2025-04,25,1,375
-Loom,Communication,2025-05,25,0,375
-Loom,Communication,2025-06,25,0,375
+Slack,Communication,2023-07,55.0,7.0,26
+Slack,Communication,2023-08,55.0,7.0,26
+Slack,Communication,2023-09,55.0,7.0,26
+Slack,Communication,2023-10,55.0,8.0,26
+Slack,Communication,2023-11,55.0,8.0,26
+Slack,Communication,2023-12,55.0,9.0,27
+Slack,Communication,2024-01,55.0,9.0,27
+Slack,Communication,2024-02,55.0,9.0,27
+Slack,Communication,2024-03,55.0,10.0,27
+Slack,Communication,2024-04,55.0,10.0,28
+Slack,Communication,2024-05,55.0,11.0,28
+Slack,Communication,2024-06,55.0,11.0,28
+Slack,Communication,2024-07,55.0,11.0,29
+Slack,Communication,2024-08,55.0,12.0,29
+Slack,Communication,2024-09,55.0,12.0,30
+Slack,Communication,2024-10,55.0,13.0,29
+Slack,Communication,2024-11,55.0,13.0,30
+Slack,Communication,2024-12,55.0,13.0,30
+Slack,Communication,2025-01,55.0,14.0,31
+Slack,Communication,2025-02,55.0,14.0,31
+Slack,Communication,2025-03,55.0,14.0,31
+Slack,Communication,2025-04,55.0,14.0,31
+Slack,Communication,2025-05,55.0,14.0,31
+Slack,Communication,2025-06,55.0,14.0,32
+Microsoft Teams,Communication,2023-07,55.0,44.0,79
+Microsoft Teams,Communication,2023-08,55.0,41.0,79
+Microsoft Teams,Communication,2023-09,55.0,39.0,81
+Microsoft Teams,Communication,2023-10,55.0,36.0,79
+Microsoft Teams,Communication,2023-11,55.0,34.0,81
+Microsoft Teams,Communication,2023-12,55.0,31.0,79
+Microsoft Teams,Communication,2024-01,55.0,29.0,79
+Microsoft Teams,Communication,2024-02,55.0,26.0,79
+Microsoft Teams,Communication,2024-03,55.0,24.0,80
+Microsoft Teams,Communication,2024-04,55.0,22.0,78
+Microsoft Teams,Communication,2024-05,55.0,19.0,79
+Microsoft Teams,Communication,2024-06,55.0,17.0,81
+Microsoft Teams,Communication,2024-07,55.0,14.0,78
+Microsoft Teams,Communication,2024-08,55.0,12.0,80
+Microsoft Teams,Communication,2024-09,55.0,9.0,80
+Microsoft Teams,Communication,2024-10,55.0,7.0,79
+Microsoft Teams,Communication,2024-11,55.0,4.0,80
+Microsoft Teams,Communication,2024-12,55.0,2.0,79
+Microsoft Teams,Communication,2025-01,55.0,0.0,80
+Microsoft Teams,Communication,2025-02,55.0,0.0,79
+Microsoft Teams,Communication,2025-03,55.0,0.0,80
+Microsoft Teams,Communication,2025-04,55.0,0.0,78
+Microsoft Teams,Communication,2025-05,55.0,0.0,80
+Microsoft Teams,Communication,2025-06,55.0,0.0,78
+Google Workspace,Productivity,2023-07,55.0,54.0,29
+Google Workspace,Productivity,2023-08,55.0,51.0,29
+Google Workspace,Productivity,2023-09,55.0,51.0,29
+Google Workspace,Productivity,2023-10,55.0,53.0,31
+Google Workspace,Productivity,2023-11,55.0,54.0,29
+Google Workspace,Productivity,2023-12,55.0,54.0,30
+Google Workspace,Productivity,2024-01,55.0,53.0,29
+Google Workspace,Productivity,2024-02,55.0,52.0,30
+Google Workspace,Productivity,2024-03,55.0,52.0,29
+Google Workspace,Productivity,2024-04,55.0,54.0,29
+Google Workspace,Productivity,2024-05,55.0,54.0,30
+Google Workspace,Productivity,2024-06,55.0,55.0,29
+Google Workspace,Productivity,2024-07,55.0,52.0,30
+Google Workspace,Productivity,2024-08,55.0,52.0,30
+Google Workspace,Productivity,2024-09,55.0,53.0,29
+Google Workspace,Productivity,2024-10,55.0,55.0,29
+Google Workspace,Productivity,2024-11,55.0,51.0,29
+Google Workspace,Productivity,2024-12,55.0,54.0,28
+Google Workspace,Productivity,2025-01,55.0,54.0,29
+Google Workspace,Productivity,2025-02,55.0,53.0,30
+Google Workspace,Productivity,2025-03,55.0,52.0,29
+Google Workspace,Productivity,2025-04,55.0,53.0,29
+Google Workspace,Productivity,2025-05,55.0,53.0,29
+Google Workspace,Productivity,2025-06,55.0,52.0,31
+Notion,Productivity,2023-07,45.0,41.0,27
+Notion,Productivity,2023-08,45.0,45.0,27
+Notion,Productivity,2023-09,45.0,44.0,27
+Notion,Productivity,2023-10,45.0,42.0,28
+Notion,Productivity,2023-11,45.0,43.0,28
+Notion,Productivity,2023-12,45.0,45.0,28
+Notion,Productivity,2024-01,45.0,43.0,26
+Notion,Productivity,2024-02,45.0,41.0,27
+Notion,Productivity,2024-03,45.0,45.0,27
+Notion,Productivity,2024-04,45.0,44.0,27
+Notion,Productivity,2024-05,45.0,42.0,26
+Notion,Productivity,2024-06,45.0,42.0,27
+Notion,Productivity,2024-07,45.0,45.0,27
+Notion,Productivity,2024-08,45.0,41.0,27
+Notion,Productivity,2024-09,45.0,42.0,27
+Notion,Productivity,2024-10,45.0,42.0,27
+Notion,Productivity,2024-11,45.0,42.0,27
+Notion,Productivity,2024-12,45.0,41.0,28
+Notion,Productivity,2025-01,45.0,45.0,27
+Notion,Productivity,2025-02,45.0,41.0,26
+Notion,Productivity,2025-03,45.0,42.0,28
+Notion,Productivity,2025-04,45.0,44.0,27
+Notion,Productivity,2025-05,45.0,41.0,26
+Notion,Productivity,2025-06,45.0,41.0,28
+GitHub Enterprise,Developer Tools,2023-07,20.0,17.0,62
+GitHub Enterprise,Developer Tools,2023-08,20.0,19.0,64
+GitHub Enterprise,Developer Tools,2023-09,20.0,16.0,65
+GitHub Enterprise,Developer Tools,2023-10,20.0,17.0,65
+GitHub Enterprise,Developer Tools,2023-11,20.0,19.0,62
+GitHub Enterprise,Developer Tools,2023-12,20.0,20.0,66
+GitHub Enterprise,Developer Tools,2024-01,20.0,17.0,65
+GitHub Enterprise,Developer Tools,2024-02,20.0,16.0,64
+GitHub Enterprise,Developer Tools,2024-03,20.0,19.0,63
+GitHub Enterprise,Developer Tools,2024-04,20.0,18.0,61
+GitHub Enterprise,Developer Tools,2024-05,20.0,19.0,62
+GitHub Enterprise,Developer Tools,2024-06,20.0,16.0,65
+GitHub Enterprise,Developer Tools,2024-07,20.0,19.0,62
+GitHub Enterprise,Developer Tools,2024-08,20.0,20.0,66
+GitHub Enterprise,Developer Tools,2024-09,20.0,20.0,61
+GitHub Enterprise,Developer Tools,2024-10,20.0,20.0,64
+GitHub Enterprise,Developer Tools,2024-11,20.0,18.0,66
+GitHub Enterprise,Developer Tools,2024-12,20.0,19.0,64
+GitHub Enterprise,Developer Tools,2025-01,20.0,17.0,63
+GitHub Enterprise,Developer Tools,2025-02,20.0,17.0,65
+GitHub Enterprise,Developer Tools,2025-03,20.0,16.0,64
+GitHub Enterprise,Developer Tools,2025-04,20.0,17.0,65
+GitHub Enterprise,Developer Tools,2025-05,20.0,20.0,61
+GitHub Enterprise,Developer Tools,2025-06,20.0,17.0,62
+Figma,Design,2023-07,40.0,30.0,74
+Figma,Design,2023-08,40.0,28.0,74
+Figma,Design,2023-09,40.0,26.0,76
+Figma,Design,2023-10,40.0,25.0,76
+Figma,Design,2023-11,40.0,23.0,76
+Figma,Design,2023-12,40.0,21.0,74
+Figma,Design,2024-01,40.0,20.0,75
+Figma,Design,2024-02,40.0,18.0,74
+Figma,Design,2024-03,40.0,16.0,74
+Figma,Design,2024-04,40.0,15.0,74
+Figma,Design,2024-05,40.0,13.0,74
+Figma,Design,2024-06,40.0,11.0,74
+Figma,Design,2024-07,40.0,10.0,75
+Figma,Design,2024-08,40.0,8.0,73
+Figma,Design,2024-09,40.0,6.0,75
+Figma,Design,2024-10,40.0,4.0,75
+Figma,Design,2024-11,40.0,3.0,74
+Figma,Design,2024-12,40.0,1.0,74
+Figma,Design,2025-01,40.0,0.0,74
+Figma,Design,2025-02,40.0,0.0,75
+Figma,Design,2025-03,40.0,0.0,74
+Figma,Design,2025-04,40.0,0.0,73
+Figma,Design,2025-05,40.0,0.0,73
+Figma,Design,2025-06,40.0,0.0,75
+AWS (Production),Cloud Infrastructure,2023-07,,,12482
+AWS (Production),Cloud Infrastructure,2023-08,,,12403
+AWS (Production),Cloud Infrastructure,2023-09,,,13507
+AWS (Production),Cloud Infrastructure,2023-10,,,14018
+AWS (Production),Cloud Infrastructure,2023-11,,,15021
+AWS (Production),Cloud Infrastructure,2023-12,,,15481
+AWS (Production),Cloud Infrastructure,2024-01,,,15703
+AWS (Production),Cloud Infrastructure,2024-02,,,16454
+AWS (Production),Cloud Infrastructure,2024-03,,,17469
+AWS (Production),Cloud Infrastructure,2024-04,,,17225
+AWS (Production),Cloud Infrastructure,2024-05,,,17688
+AWS (Production),Cloud Infrastructure,2024-06,,,17690
+AWS (Production),Cloud Infrastructure,2024-07,,,19826
+AWS (Production),Cloud Infrastructure,2024-08,,,20395
+AWS (Production),Cloud Infrastructure,2024-09,,,19593
+AWS (Production),Cloud Infrastructure,2024-10,,,21161
+AWS (Production),Cloud Infrastructure,2024-11,,,21522
+AWS (Production),Cloud Infrastructure,2024-12,,,21353
+AWS (Production),Cloud Infrastructure,2025-01,,,23895
+AWS (Production),Cloud Infrastructure,2025-02,,,22732
+AWS (Production),Cloud Infrastructure,2025-03,,,22961
+AWS (Production),Cloud Infrastructure,2025-04,,,24833
+AWS (Production),Cloud Infrastructure,2025-05,,,25801
+AWS (Production),Cloud Infrastructure,2025-06,,,24593
+AWS (Dev/Staging),Cloud Infrastructure,2023-07,,,2063
+AWS (Dev/Staging),Cloud Infrastructure,2023-08,,,2314
+AWS (Dev/Staging),Cloud Infrastructure,2023-09,,,2393
+AWS (Dev/Staging),Cloud Infrastructure,2023-10,,,2710
+AWS (Dev/Staging),Cloud Infrastructure,2023-11,,,3243
+AWS (Dev/Staging),Cloud Infrastructure,2023-12,,,3357
+AWS (Dev/Staging),Cloud Infrastructure,2024-01,,,4133
+AWS (Dev/Staging),Cloud Infrastructure,2024-02,,,4361
+AWS (Dev/Staging),Cloud Infrastructure,2024-03,,,4825
+AWS (Dev/Staging),Cloud Infrastructure,2024-04,,,4474
+AWS (Dev/Staging),Cloud Infrastructure,2024-05,,,5469
+AWS (Dev/Staging),Cloud Infrastructure,2024-06,,,5227
+AWS (Dev/Staging),Cloud Infrastructure,2024-07,,,5429
+AWS (Dev/Staging),Cloud Infrastructure,2024-08,,,5369
+AWS (Dev/Staging),Cloud Infrastructure,2024-09,,,5645
+AWS (Dev/Staging),Cloud Infrastructure,2024-10,,,6749
+AWS (Dev/Staging),Cloud Infrastructure,2024-11,,,6742
+AWS (Dev/Staging),Cloud Infrastructure,2024-12,,,6711
+AWS (Dev/Staging),Cloud Infrastructure,2025-01,,,7568
+AWS (Dev/Staging),Cloud Infrastructure,2025-02,,,7319
+AWS (Dev/Staging),Cloud Infrastructure,2025-03,,,8124
+AWS (Dev/Staging),Cloud Infrastructure,2025-04,,,8066
+AWS (Dev/Staging),Cloud Infrastructure,2025-05,,,9156
+AWS (Dev/Staging),Cloud Infrastructure,2025-06,,,9470
+Snowflake,Data Platform,2023-07,15.0,14.0,299
+Snowflake,Data Platform,2023-08,15.0,13.0,304
+Snowflake,Data Platform,2023-09,15.0,15.0,312
+Snowflake,Data Platform,2023-10,15.0,14.0,313
+Snowflake,Data Platform,2023-11,15.0,13.0,335
+Snowflake,Data Platform,2023-12,15.0,14.0,335
+Snowflake,Data Platform,2024-01,15.0,13.0,364
+Snowflake,Data Platform,2024-02,15.0,14.0,358
+Snowflake,Data Platform,2024-03,15.0,13.0,364
+Snowflake,Data Platform,2024-04,15.0,13.0,366
+Snowflake,Data Platform,2024-05,15.0,14.0,397
+Snowflake,Data Platform,2024-06,15.0,14.0,380
+Snowflake,Data Platform,2024-07,15.0,15.0,404
+Snowflake,Data Platform,2024-08,15.0,13.0,423
+Snowflake,Data Platform,2024-09,15.0,13.0,428
+Snowflake,Data Platform,2024-10,15.0,14.0,416
+Snowflake,Data Platform,2024-11,15.0,14.0,426
+Snowflake,Data Platform,2024-12,15.0,14.0,472
+Snowflake,Data Platform,2025-01,15.0,14.0,442
+Snowflake,Data Platform,2025-02,15.0,14.0,473
+Snowflake,Data Platform,2025-03,15.0,13.0,496
+Snowflake,Data Platform,2025-04,15.0,14.0,494
+Snowflake,Data Platform,2025-05,15.0,15.0,485
+Snowflake,Data Platform,2025-06,15.0,14.0,499
+Looker,Analytics,2023-07,30.0,24.0,80
+Looker,Analytics,2023-08,30.0,22.0,80
+Looker,Analytics,2023-09,30.0,21.0,78
+Looker,Analytics,2023-10,30.0,20.0,79
+Looker,Analytics,2023-11,30.0,18.0,78
+Looker,Analytics,2023-12,30.0,17.0,78
+Looker,Analytics,2024-01,30.0,16.0,81
+Looker,Analytics,2024-02,30.0,14.0,78
+Looker,Analytics,2024-03,30.0,13.0,79
+Looker,Analytics,2024-04,30.0,12.0,78
+Looker,Analytics,2024-05,30.0,10.0,81
+Looker,Analytics,2024-06,30.0,9.0,80
+Looker,Analytics,2024-07,30.0,8.0,79
+Looker,Analytics,2024-08,30.0,6.0,80
+Looker,Analytics,2024-09,30.0,5.0,80
+Looker,Analytics,2024-10,30.0,3.0,81
+Looker,Analytics,2024-11,30.0,2.0,79
+Looker,Analytics,2024-12,30.0,1.0,81
+Looker,Analytics,2025-01,30.0,0.0,81
+Looker,Analytics,2025-02,30.0,0.0,81
+Looker,Analytics,2025-03,30.0,0.0,80
+Looker,Analytics,2025-04,30.0,0.0,80
+Looker,Analytics,2025-05,30.0,0.0,79
+Looker,Analytics,2025-06,30.0,0.0,80
+Salesforce,CRM,2023-07,15.0,12.0,250
+Salesforce,CRM,2023-08,15.0,12.0,248
+Salesforce,CRM,2023-09,15.0,15.0,256
+Salesforce,CRM,2023-10,15.0,13.0,256
+Salesforce,CRM,2023-11,15.0,13.0,256
+Salesforce,CRM,2023-12,15.0,11.0,247
+Salesforce,CRM,2024-01,15.0,11.0,245
+Salesforce,CRM,2024-02,15.0,13.0,249
+Salesforce,CRM,2024-03,15.0,13.0,246
+Salesforce,CRM,2024-04,15.0,15.0,246
+Salesforce,CRM,2024-05,15.0,15.0,245
+Salesforce,CRM,2024-06,15.0,11.0,259
+Salesforce,CRM,2024-07,15.0,12.0,247
+Salesforce,CRM,2024-08,15.0,12.0,246
+Salesforce,CRM,2024-09,15.0,11.0,256
+Salesforce,CRM,2024-10,15.0,12.0,248
+Salesforce,CRM,2024-11,15.0,11.0,245
+Salesforce,CRM,2024-12,15.0,12.0,240
+Salesforce,CRM,2025-01,15.0,12.0,253
+Salesforce,CRM,2025-02,15.0,11.0,242
+Salesforce,CRM,2025-03,15.0,12.0,243
+Salesforce,CRM,2025-04,15.0,14.0,244
+Salesforce,CRM,2025-05,15.0,13.0,250
+Salesforce,CRM,2025-06,15.0,15.0,243
+HubSpot,Marketing,2023-07,12.0,9.0,114
+HubSpot,Marketing,2023-08,12.0,12.0,118
+HubSpot,Marketing,2023-09,12.0,12.0,114
+HubSpot,Marketing,2023-10,12.0,9.0,110
+HubSpot,Marketing,2023-11,12.0,12.0,115
+HubSpot,Marketing,2023-12,12.0,12.0,112
+HubSpot,Marketing,2024-01,12.0,8.0,118
+HubSpot,Marketing,2024-02,12.0,11.0,111
+HubSpot,Marketing,2024-03,12.0,8.0,118
+HubSpot,Marketing,2024-04,12.0,12.0,114
+HubSpot,Marketing,2024-05,12.0,10.0,110
+HubSpot,Marketing,2024-06,12.0,12.0,114
+HubSpot,Marketing,2024-07,12.0,12.0,115
+HubSpot,Marketing,2024-08,12.0,11.0,117
+HubSpot,Marketing,2024-09,12.0,10.0,110
+HubSpot,Marketing,2024-10,12.0,8.0,114
+HubSpot,Marketing,2024-11,12.0,11.0,115
+HubSpot,Marketing,2024-12,12.0,11.0,116
+HubSpot,Marketing,2025-01,12.0,11.0,118
+HubSpot,Marketing,2025-02,12.0,12.0,115
+HubSpot,Marketing,2025-03,12.0,8.0,114
+HubSpot,Marketing,2025-04,12.0,11.0,117
+HubSpot,Marketing,2025-05,12.0,8.0,112
+HubSpot,Marketing,2025-06,12.0,12.0,118
+Okta,Identity,2023-07,55.0,54.0,24
+Okta,Identity,2023-08,55.0,55.0,25
+Okta,Identity,2023-09,55.0,52.0,24
+Okta,Identity,2023-10,55.0,53.0,24
+Okta,Identity,2023-11,55.0,54.0,24
+Okta,Identity,2023-12,55.0,53.0,24
+Okta,Identity,2024-01,55.0,53.0,24
+Okta,Identity,2024-02,55.0,52.0,25
+Okta,Identity,2024-03,55.0,55.0,24
+Okta,Identity,2024-04,55.0,54.0,24
+Okta,Identity,2024-05,55.0,52.0,24
+Okta,Identity,2024-06,55.0,55.0,24
+Okta,Identity,2024-07,55.0,52.0,24
+Okta,Identity,2024-08,55.0,52.0,24
+Okta,Identity,2024-09,55.0,51.0,24
+Okta,Identity,2024-10,55.0,54.0,25
+Okta,Identity,2024-11,55.0,53.0,24
+Okta,Identity,2024-12,55.0,52.0,24
+Okta,Identity,2025-01,55.0,52.0,25
+Okta,Identity,2025-02,55.0,54.0,25
+Okta,Identity,2025-03,55.0,52.0,24
+Okta,Identity,2025-04,55.0,52.0,24
+Okta,Identity,2025-05,55.0,55.0,24
+Okta,Identity,2025-06,55.0,55.0,25
+Miro,Collaboration,2023-07,35.0,7.0,20
+Miro,Collaboration,2023-08,35.0,6.0,20
+Miro,Collaboration,2023-09,35.0,6.0,20
+Miro,Collaboration,2023-10,35.0,5.0,20
+Miro,Collaboration,2023-11,35.0,5.0,20
+Miro,Collaboration,2023-12,35.0,5.0,20
+Miro,Collaboration,2024-01,35.0,4.0,19
+Miro,Collaboration,2024-02,35.0,4.0,19
+Miro,Collaboration,2024-03,35.0,3.0,20
+Miro,Collaboration,2024-04,35.0,3.0,19
+Miro,Collaboration,2024-05,35.0,3.0,19
+Miro,Collaboration,2024-06,35.0,2.0,19
+Miro,Collaboration,2024-07,35.0,2.0,20
+Miro,Collaboration,2024-08,35.0,1.0,20
+Miro,Collaboration,2024-09,35.0,1.0,19
+Miro,Collaboration,2024-10,35.0,1.0,20
+Miro,Collaboration,2024-11,35.0,0.0,20
+Miro,Collaboration,2024-12,35.0,0.0,20
+Miro,Collaboration,2025-01,35.0,0.0,20
+Miro,Collaboration,2025-02,35.0,0.0,20
+Miro,Collaboration,2025-03,35.0,0.0,19
+Miro,Collaboration,2025-04,35.0,0.0,20
+Miro,Collaboration,2025-05,35.0,0.0,19
+Miro,Collaboration,2025-06,35.0,0.0,20
+Loom,Communication,2023-07,25.0,3.0,15
+Loom,Communication,2023-08,25.0,3.0,14
+Loom,Communication,2023-09,25.0,3.0,14
+Loom,Communication,2023-10,25.0,3.0,15
+Loom,Communication,2023-11,25.0,2.0,14
+Loom,Communication,2023-12,25.0,2.0,15
+Loom,Communication,2024-01,25.0,2.0,14
+Loom,Communication,2024-02,25.0,2.0,14
+Loom,Communication,2024-03,25.0,2.0,15
+Loom,Communication,2024-04,25.0,1.0,15
+Loom,Communication,2024-05,25.0,1.0,15
+Loom,Communication,2024-06,25.0,1.0,14
+Loom,Communication,2024-07,25.0,1.0,15
+Loom,Communication,2024-08,25.0,1.0,15
+Loom,Communication,2024-09,25.0,0.0,15
+Loom,Communication,2024-10,25.0,0.0,15
+Loom,Communication,2024-11,25.0,0.0,15
+Loom,Communication,2024-12,25.0,0.0,14
+Loom,Communication,2025-01,25.0,0.0,14
+Loom,Communication,2025-02,25.0,0.0,15
+Loom,Communication,2025-03,25.0,0.0,14
+Loom,Communication,2025-04,25.0,0.0,15
+Loom,Communication,2025-05,25.0,0.0,14
+Loom,Communication,2025-06,25.0,0.0,15

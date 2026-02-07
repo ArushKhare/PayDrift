@@ -4,8 +4,9 @@ import pandas as pd
 from io import BytesIO
 import numpy as np
 
-from models import RawDataResponse, UploadResponse
+from models import RawDataResponse, DriftResponse, UploadResponse
 from demo_data import load_all, df_preview
+from drift import analyze_all
 
 app = FastAPI(title="PayDrift API")
 
@@ -31,120 +32,20 @@ def startup():
     print(f"  saas_cloud: {len(datasets['saas_cloud'])} rows")
 
 
-# ════════════════════════════════════════════════════════════
-# ANALYSIS FUNCTIONS
-# ════════════════════════════════════════════════════════════
-
-def calculate_drift(df, date_col, amount_col, group_cols, n_periods=3):
-    dates_sorted = sorted(df[date_col].unique())
-    cutoff = dates_sorted[-n_periods]
-    before = df[df[date_col] < cutoff].groupby(group_cols)[amount_col].mean()
-    after = df[df[date_col] >= cutoff].groupby(group_cols)[amount_col].mean()
-    result = pd.DataFrame({"avg_before": before, "avg_after": after}).fillna(0)
-    result["drift"] = result["avg_after"] - result["avg_before"]
-    result["drift_pct"] = (result["drift"] / result["avg_before"].replace(0, float("nan"))) * 100
-    return result.sort_values("drift", key=abs, ascending=False).reset_index()
+# --- Health check ---
+@app.get("/health")
+def health():
+    return {"status": "ok", "datasets_loaded": list(datasets.keys())}
 
 
-def monthly_trend(df, date_col, amount_col):
-    return df.groupby(date_col)[amount_col].sum().reset_index()
-
-
-def utilization_flag(df, date_col, total_col, active_col, service_col, threshold=0.3):
-    latest = df[df[date_col] == df[date_col].max()].copy()
-    latest = latest[latest[total_col].notna() & (latest[total_col] != "")]
-    latest[total_col] = latest[total_col].astype(float)
-    latest[active_col] = latest[active_col].astype(float)
-    latest["utilization"] = latest[active_col] / latest[total_col]
-    latest["flagged"] = latest["utilization"] < threshold
-    return latest[[service_col, total_col, active_col, "utilization", "flagged"]]
-
-
-# ════════════════════════════════════════════════════════════
-# DRIFT ENDPOINTS (must be before /api/drift)
-# ════════════════════════════════════════════════════════════
-
-@app.get("/api/drift/payroll")
-def drift_payroll():
-    df = datasets["payroll"]
-    result = calculate_drift(df, "month", "total", ["department", "type"])
-    return result.replace({np.nan: None}).to_dict(orient="records")
-
-
-@app.get("/api/drift/ai-costs")
-def drift_ai():
-    df = datasets["ai_costs"]
-    result = calculate_drift(df, "month", "cost", ["team", "service"])
-    return result.replace({np.nan: None}).to_dict(orient="records")
-
-
-@app.get("/api/drift/saas")
-def drift_saas():
-    df = datasets["saas_cloud"]
-    result = calculate_drift(df, "month", "monthly_cost", ["service"])
-    return result.replace({np.nan: None}).to_dict(orient="records")
-
-
-# ════════════════════════════════════════════════════════════
-# TREND ENDPOINTS
-# ════════════════════════════════════════════════════════════
-
-@app.get("/api/trends/payroll")
-def trends_payroll():
-    df = datasets["payroll"]
-    result = monthly_trend(df, "month", "total")
-    return result.to_dict(orient="records")
-
-
-@app.get("/api/trends/ai-costs")
-def trends_ai():
-    df = datasets["ai_costs"]
-    result = monthly_trend(df, "month", "cost")
-    return result.to_dict(orient="records")
-
-
-@app.get("/api/trends/saas")
-def trends_saas():
-    df = datasets["saas_cloud"]
-    result = monthly_trend(df, "month", "monthly_cost")
-    return result.to_dict(orient="records")
-
-
-# ════════════════════════════════════════════════════════════
-# UTILIZATION ENDPOINT
-# ════════════════════════════════════════════════════════════
-
-@app.get("/api/utilization/saas")
-def utilization_saas():
-    df = datasets["saas_cloud"]
-    result = utilization_flag(df, "month", "total_seats", "active_seats", "service")
-    return result.to_dict(orient="records")
-
-
-# ════════════════════════════════════════════════════════════
-# RAW DATA SUMMARY (generic /api/drift AFTER specific routes)
-# ════════════════════════════════════════════════════════════
-
+# --- GET /api/drift ---
+# Phase 1: Returns raw data summary + samples
+# Phase 2: Will return actual drift calculations
 @app.get("/api/drift", response_model=RawDataResponse)
 def get_drift():
-    payroll = datasets.get("payroll")
-    ai_costs = datasets.get("ai_costs")
-    saas_cloud = datasets.get("saas_cloud")
-
-    if payroll is None or ai_costs is None or saas_cloud is None:
+    if not datasets:
         raise HTTPException(status_code=500, detail="Demo data not loaded")
-
-    return RawDataResponse(
-        payroll_rows=len(payroll),
-        ai_costs_rows=len(ai_costs),
-        saas_cloud_rows=len(saas_cloud),
-        payroll_columns=list(payroll.columns),
-        ai_costs_columns=list(ai_costs.columns),
-        saas_cloud_columns=list(saas_cloud.columns),
-        payroll_sample=df_preview(payroll),
-        ai_costs_sample=df_preview(ai_costs),
-        saas_cloud_sample=df_preview(saas_cloud),
-    )
+    return analyze_all(datasets)
 
 
 # ════════════════════════════════════════════════════════════

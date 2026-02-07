@@ -2,6 +2,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 from io import BytesIO
+import numpy as np
 
 from models import RawDataResponse, UploadResponse
 from demo_data import load_all, df_preview
@@ -11,19 +12,17 @@ app = FastAPI(title="PayDrift API")
 # --- CORS (allow frontend to connect) ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],       # tighten in production
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # --- In-memory store for uploaded data ---
-# Starts with demo data, gets replaced if user uploads CSVs
 datasets: dict[str, pd.DataFrame] = {}
 
 
 @app.on_event("startup")
 def startup():
-    """Load demo data into memory when the server starts."""
     global datasets
     datasets = load_all()
     print(f"Loaded demo data:")
@@ -32,15 +31,100 @@ def startup():
     print(f"  saas_cloud: {len(datasets['saas_cloud'])} rows")
 
 
-# --- Health check ---
-@app.get("/health")
-def health():
-    return {"status": "ok", "datasets_loaded": list(datasets.keys())}
+# ════════════════════════════════════════════════════════════
+# ANALYSIS FUNCTIONS
+# ════════════════════════════════════════════════════════════
+
+def calculate_drift(df, date_col, amount_col, group_cols, n_periods=3):
+    dates_sorted = sorted(df[date_col].unique())
+    cutoff = dates_sorted[-n_periods]
+    before = df[df[date_col] < cutoff].groupby(group_cols)[amount_col].mean()
+    after = df[df[date_col] >= cutoff].groupby(group_cols)[amount_col].mean()
+    result = pd.DataFrame({"avg_before": before, "avg_after": after}).fillna(0)
+    result["drift"] = result["avg_after"] - result["avg_before"]
+    result["drift_pct"] = (result["drift"] / result["avg_before"].replace(0, float("nan"))) * 100
+    return result.sort_values("drift", key=abs, ascending=False).reset_index()
 
 
-# --- GET /api/drift ---
-# Phase 1: Returns raw data summary + samples
-# Phase 2: Will return actual drift calculations
+def monthly_trend(df, date_col, amount_col):
+    return df.groupby(date_col)[amount_col].sum().reset_index()
+
+
+def utilization_flag(df, date_col, total_col, active_col, service_col, threshold=0.3):
+    latest = df[df[date_col] == df[date_col].max()].copy()
+    latest = latest[latest[total_col].notna() & (latest[total_col] != "")]
+    latest[total_col] = latest[total_col].astype(float)
+    latest[active_col] = latest[active_col].astype(float)
+    latest["utilization"] = latest[active_col] / latest[total_col]
+    latest["flagged"] = latest["utilization"] < threshold
+    return latest[[service_col, total_col, active_col, "utilization", "flagged"]]
+
+
+# ════════════════════════════════════════════════════════════
+# DRIFT ENDPOINTS (must be before /api/drift)
+# ════════════════════════════════════════════════════════════
+
+@app.get("/api/drift/payroll")
+def drift_payroll():
+    df = datasets["payroll"]
+    result = calculate_drift(df, "month", "total", ["department", "type"])
+    return result.replace({np.nan: None}).to_dict(orient="records")
+
+
+@app.get("/api/drift/ai-costs")
+def drift_ai():
+    df = datasets["ai_costs"]
+    result = calculate_drift(df, "month", "cost", ["team", "service"])
+    return result.replace({np.nan: None}).to_dict(orient="records")
+
+
+@app.get("/api/drift/saas")
+def drift_saas():
+    df = datasets["saas_cloud"]
+    result = calculate_drift(df, "month", "monthly_cost", ["service"])
+    return result.replace({np.nan: None}).to_dict(orient="records")
+
+
+# ════════════════════════════════════════════════════════════
+# TREND ENDPOINTS
+# ════════════════════════════════════════════════════════════
+
+@app.get("/api/trends/payroll")
+def trends_payroll():
+    df = datasets["payroll"]
+    result = monthly_trend(df, "month", "total")
+    return result.to_dict(orient="records")
+
+
+@app.get("/api/trends/ai-costs")
+def trends_ai():
+    df = datasets["ai_costs"]
+    result = monthly_trend(df, "month", "cost")
+    return result.to_dict(orient="records")
+
+
+@app.get("/api/trends/saas")
+def trends_saas():
+    df = datasets["saas_cloud"]
+    result = monthly_trend(df, "month", "monthly_cost")
+    return result.to_dict(orient="records")
+
+
+# ════════════════════════════════════════════════════════════
+# UTILIZATION ENDPOINT
+# ════════════════════════════════════════════════════════════
+
+@app.get("/api/utilization/saas")
+def utilization_saas():
+    df = datasets["saas_cloud"]
+    result = utilization_flag(df, "month", "total_seats", "active_seats", "service")
+    return result.to_dict(orient="records")
+
+
+# ════════════════════════════════════════════════════════════
+# RAW DATA SUMMARY (generic /api/drift AFTER specific routes)
+# ════════════════════════════════════════════════════════════
+
 @app.get("/api/drift", response_model=RawDataResponse)
 def get_drift():
     payroll = datasets.get("payroll")
@@ -63,32 +147,29 @@ def get_drift():
     )
 
 
-# --- POST /api/upload ---
-# Accepts a CSV file, parses it, stores in memory
+# ════════════════════════════════════════════════════════════
+# HEALTH / UPLOAD / RESET
+# ════════════════════════════════════════════════════════════
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "datasets_loaded": list(datasets.keys())}
+
+
 @app.post("/api/upload", response_model=UploadResponse)
 async def upload_csv(
     file: UploadFile = File(...),
-    dataset_type: str = "payroll",  # "payroll" | "ai_costs" | "saas_cloud"
+    dataset_type: str = "payroll",
 ):
-    # Validate dataset type
     valid_types = ["payroll", "ai_costs", "saas_cloud"]
     if dataset_type not in valid_types:
-        raise HTTPException(
-            status_code=400,
-            detail=f"dataset_type must be one of: {valid_types}"
-        )
+        raise HTTPException(status_code=400, detail=f"dataset_type must be one of: {valid_types}")
 
-    # Validate file type
     if not file.filename.endswith((".csv", ".xlsx", ".xls")):
-        raise HTTPException(
-            status_code=400,
-            detail="File must be .csv, .xlsx, or .xls"
-        )
+        raise HTTPException(status_code=400, detail="File must be .csv, .xlsx, or .xls")
 
-    # Read file contents
     contents = await file.read()
 
-    # Parse based on file type
     try:
         if file.filename.endswith(".csv"):
             df = pd.read_csv(BytesIO(contents))
@@ -97,14 +178,11 @@ async def upload_csv(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to parse file: {str(e)}")
 
-    # Clean column names
     df.columns = df.columns.str.strip()
 
-    # Try to parse month column if it exists
     if "month" in df.columns:
         df["month"] = pd.to_datetime(df["month"])
 
-    # Store in memory (replaces demo data for this type)
     datasets[dataset_type] = df
     print(f"Uploaded {file.filename} as {dataset_type}: {len(df)} rows")
 
@@ -116,8 +194,6 @@ async def upload_csv(
     )
 
 
-# --- POST /api/reset ---
-# Reset to demo data (useful after uploading custom data)
 @app.post("/api/reset")
 def reset_data():
     global datasets

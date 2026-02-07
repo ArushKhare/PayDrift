@@ -7,7 +7,7 @@ load_dotenv()
 client = AsyncDedalus()
 runner = DedalusRunner(client)
 
-MODEL = "anthropic/claude-sonnet-4-20250514"
+MODEL = "anthropic/claude-opus-4-6"
 
 SYSTEM = """You are PayDrift, an elite financial AI agent. Sharp, direct, data-driven. You speak like a trusted CFO advisor. No fluff. Every sentence must reference specific numbers from the data. Rank recommendations by (savings × ease)."""
 

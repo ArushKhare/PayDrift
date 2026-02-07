@@ -1,12 +1,20 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 from io import BytesIO
 
-from models import RawDataResponse, DriftResponse, UploadResponse, ChatRequest, ChatResponse
+from models import (
+    RawDataResponse, DriftResponse, UploadResponse,
+    ChatRequest, ChatResponse,
+    UserRegister, UserLogin, TokenResponse,
+)
 from demo_data import load_all, df_preview
 from drift import analyze_all
 from agent import format_drift_for_ai, analyze_drift, chat_with_agent
+from auth import (
+    users_db, hash_password, verify_password,
+    create_access_token, get_current_user,
+)
 
 app = FastAPI(title="PayDrift API")
 
@@ -40,10 +48,40 @@ def health():
     return {"status": "ok", "datasets_loaded": list(datasets.keys())}
 
 
+# --- POST /api/register ---
+@app.post("/api/register", response_model=TokenResponse)
+def register(body: UserRegister):
+    if body.email in users_db:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    users_db[body.email] = {
+        "email": body.email,
+        "name": body.name,
+        "hashed_password": hash_password(body.password),
+    }
+    token = create_access_token({"sub": body.email})
+    return TokenResponse(access_token=token, name=body.name, email=body.email)
+
+
+# --- POST /api/login ---
+@app.post("/api/login", response_model=TokenResponse)
+def login(body: UserLogin):
+    user = users_db.get(body.email)
+    if not user or not verify_password(body.password, user["hashed_password"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    token = create_access_token({"sub": body.email})
+    return TokenResponse(access_token=token, name=user["name"], email=user["email"])
+
+
+# --- GET /api/me ---
+@app.get("/api/me")
+def me(user: dict = Depends(get_current_user)):
+    return {"email": user["email"], "name": user["name"]}
+
+
 # --- GET /api/drift ---
 # Returns drift calculations for all 3 datasets
 @app.get("/api/drift")
-def get_drift():
+def get_drift(user: dict = Depends(get_current_user)):
     if not datasets:
         raise HTTPException(status_code=500, detail="Demo data not loaded")
     return analyze_all(datasets)
@@ -55,6 +93,7 @@ def get_drift():
 async def upload_csv(
     file: UploadFile = File(...),
     dataset_type: str = "payroll",  # "payroll" | "ai_costs" | "saas_cloud"
+    user: dict = Depends(get_current_user),
 ):
     # Validate dataset type
     valid_types = ["payroll", "ai_costs", "saas_cloud"]
@@ -105,7 +144,7 @@ async def upload_csv(
 # --- POST /api/reset ---
 # Reset to demo data (useful after uploading custom data)
 @app.post("/api/reset")
-def reset_data():
+def reset_data(user: dict = Depends(get_current_user)):
     global datasets
     datasets = load_all()
     return {"status": "reset to demo data"}
@@ -115,7 +154,7 @@ def reset_data():
 # --- POST /api/analyze ---
 # AI analyzes all drift data and returns insights + recommendations
 @app.post("/api/analyze")
-async def analyze():
+async def analyze(user: dict = Depends(get_current_user)):
     if not datasets:
         raise HTTPException(status_code=500, detail="No data loaded")
 
@@ -128,7 +167,7 @@ async def analyze():
 # --- POST /api/chat ---
 # AI answers follow-up questions with drift data context
 @app.post("/api/chat")
-async def chat(req: ChatRequest):
+async def chat(req: ChatRequest, user: dict = Depends(get_current_user)):
     if not datasets:
         raise HTTPException(status_code=500, detail="No data loaded")
 

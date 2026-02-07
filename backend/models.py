@@ -67,3 +67,22 @@ class UploadResponse(BaseModel):
     rows: int
     columns: list[str]
     sample: list[dict]             # first 5 rows preview
+
+
+# --- Auth models ---
+class UserRegister(BaseModel):
+    email: str
+    name: str
+    password: str
+
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    name: str
+    email: str

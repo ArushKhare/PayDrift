@@ -7,7 +7,7 @@ import {
   Users, Bot, Cloud, TrendingUp, TrendingDown, AlertTriangle, RefreshCw,
   Loader2, Zap, DollarSign, BarChart3, ArrowUpRight, ArrowDownRight,
   Sparkles, Send, X, MessageSquare, Upload, CheckCircle, FileSpreadsheet,
-  ArrowRight, Shield, Cpu, Eye,
+  ArrowRight, Shield, Cpu, Eye, LogIn, UserPlus, LogOut, Mail, Lock, User,
 } from "lucide-react";
 
 const API = "http://localhost:8000";
@@ -16,11 +16,12 @@ const fmtPct = (n) => (n >= 0 ? "+" : "") + n.toFixed(1) + "%";
 const MO = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const FULL_MO = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-async function get(p) { const r = await fetch(`${API}${p}`); if (!r.ok) throw new Error(`${r.status}`); return r.json(); }
-async function post(p, b) { const r = await fetch(`${API}${p}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }); if (!r.ok) throw new Error(`${r.status}`); return r.json(); }
-async function upload(file, type) {
+function authHeaders(token) { return token ? { Authorization: `Bearer ${token}` } : {}; }
+async function get(p, token) { const r = await fetch(`${API}${p}`, { headers: authHeaders(token) }); if (!r.ok) throw new Error(`${r.status}`); return r.json(); }
+async function post(p, b, token) { const r = await fetch(`${API}${p}`, { method: "POST", headers: { "Content-Type": "application/json", ...authHeaders(token) }, body: JSON.stringify(b) }); if (!r.ok) throw new Error(`${r.status}`); return r.json(); }
+async function upload(file, type, token) {
   const fd = new FormData(); fd.append("file", file); fd.append("dataset_type", type);
-  const r = await fetch(`${API}/api/upload?dataset_type=${type}`, { method: "POST", body: fd });
+  const r = await fetch(`${API}/api/upload?dataset_type=${type}`, { method: "POST", headers: authHeaders(token), body: fd });
   if (!r.ok) throw new Error(`Upload failed: ${r.status}`);
   return r.json();
 }
@@ -130,22 +131,97 @@ function DropZone({ label, icon: Icon, color, file, onFile, desc }) {
 }
 
 // ════════════════════════════════════════
+// AUTH MODAL
+// ════════════════════════════════════════
+function AuthModal({ mode, onClose, onAuth }) {
+  const [isLogin, setIsLogin] = useState(mode === "login");
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const endpoint = isLogin ? "/api/login" : "/api/register";
+      const body = isLogin ? { email, password } : { email, name, password };
+      const r = await fetch(`${API}${endpoint}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = await r.json();
+      if (!r.ok) { setError(data.detail || "Something went wrong"); setLoading(false); return; }
+      onAuth(data);
+    } catch { setError("Could not connect to server"); setLoading(false); }
+  };
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", animation: "fadeIn 0.2s ease" }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: 400, borderRadius: 24, background: "#111113", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 24px 80px rgba(0,0,0,0.7)", overflow: "hidden" }}>
+        {/* Header */}
+        <div style={{ padding: "24px 28px 0", textAlign: "center" }}>
+          <div style={{ ...S.logo, width: 44, height: 44, borderRadius: 12, margin: "0 auto 16px" }}><TrendingUp size={20} color="#fff" /></div>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: "#fff", margin: "0 0 6px" }}>{isLogin ? "Welcome back" : "Create account"}</h2>
+          <p style={{ fontSize: 13, color: "#52525b", margin: 0 }}>{isLogin ? "Log in to your PayDrift account" : "Start finding hidden cost drift"}</p>
+        </div>
+        {/* Tabs */}
+        <div style={{ display: "flex", margin: "20px 28px 0", background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: 4, border: "1px solid rgba(255,255,255,0.04)" }}>
+          <button onClick={() => { setIsLogin(true); setError(""); }} style={{ flex: 1, padding: "8px 0", borderRadius: 8, fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", background: isLogin ? "rgba(167,139,250,0.15)" : "transparent", color: isLogin ? "#a78bfa" : "#52525b" }}>Log In</button>
+          <button onClick={() => { setIsLogin(false); setError(""); }} style={{ flex: 1, padding: "8px 0", borderRadius: 8, fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer", background: !isLogin ? "rgba(167,139,250,0.15)" : "transparent", color: !isLogin ? "#a78bfa" : "#52525b" }}>Sign Up</button>
+        </div>
+        {/* Form */}
+        <form onSubmit={handleSubmit} style={{ padding: "20px 28px 28px" }}>
+          {!isLogin && (
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: "#71717a", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 6 }}>Name</label>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "0 14px" }}>
+                <User size={16} color="#52525b" />
+                <input value={name} onChange={e => setName(e.target.value)} placeholder="Your name" required style={{ flex: 1, background: "none", border: "none", padding: "12px 0", color: "#fff", outline: "none", fontSize: 14, fontFamily: "inherit" }} />
+              </div>
+            </div>
+          )}
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: "#71717a", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 6 }}>Email</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "0 14px" }}>
+              <Mail size={16} color="#52525b" />
+              <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="you@company.com" required style={{ flex: 1, background: "none", border: "none", padding: "12px 0", color: "#fff", outline: "none", fontSize: 14, fontFamily: "inherit" }} />
+            </div>
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: "#71717a", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 6 }}>Password</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "0 14px" }}>
+              <Lock size={16} color="#52525b" />
+              <input value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder="••••••••" required style={{ flex: 1, background: "none", border: "none", padding: "12px 0", color: "#fff", outline: "none", fontSize: 14, fontFamily: "inherit" }} />
+            </div>
+          </div>
+          {error && <p style={{ fontSize: 13, color: "#f87171", marginBottom: 12, textAlign: "center" }}>{error}</p>}
+          <button type="submit" disabled={loading} style={{ ...S.aiBtn, width: "100%", justifyContent: "center", fontSize: 15, padding: "14px 0", opacity: loading ? 0.7 : 1 }}>
+            {loading ? <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} /> : isLogin ? <><LogIn size={18} /> Log In</> : <><UserPlus size={18} /> Sign Up</>}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════
 // LANDING PAGE
 // ════════════════════════════════════════
-function Landing({ onStart }) {
+function Landing({ onStart, user, token, onShowAuth, onLogout }) {
   const [files, setFiles] = useState({ payroll: null, ai_costs: null, saas_cloud: null });
   const [uploading, setUploading] = useState(false);
   const [useDemo, setUseDemo] = useState(false);
   const allUploaded = files.payroll && files.ai_costs && files.saas_cloud;
 
   const handleStart = async () => {
+    if (!token) { onShowAuth("login"); return; }
     if (useDemo) { onStart(); return; }
     if (!allUploaded) return;
     setUploading(true);
     try {
-      await upload(files.payroll, "payroll");
-      await upload(files.ai_costs, "ai_costs");
-      await upload(files.saas_cloud, "saas_cloud");
+      await upload(files.payroll, "payroll", token);
+      await upload(files.ai_costs, "ai_costs", token);
+      await upload(files.saas_cloud, "saas_cloud", token);
       onStart();
     } catch (e) { alert("Upload failed: " + e.message); setUploading(false); }
   };
@@ -161,9 +237,29 @@ function Landing({ onStart }) {
           <div style={S.logo}><TrendingUp size={16} color="#fff" /></div>
           <span style={{ fontWeight: 800, fontSize: 17, color: "#fff" }}>PayDrift</span>
         </div>
-        <button onClick={() => { setUseDemo(true); onStart(); }} style={{ padding: "8px 16px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#a1a1aa", fontSize: 12, fontWeight: 600 }}>
-          Try with demo data →
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button onClick={() => { if (!token) { onShowAuth("login"); return; } setUseDemo(true); onStart(); }} style={{ padding: "8px 16px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#a1a1aa", fontSize: 12, fontWeight: 600 }}>
+            Try with demo data →
+          </button>
+          {user ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 1, height: 16, background: "rgba(255,255,255,0.06)" }} />
+              <span style={{ fontSize: 12, color: "#a1a1aa", fontWeight: 600 }}>{user.name}</span>
+              <button onClick={onLogout} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#71717a", fontSize: 12, fontWeight: 600 }}>
+                <LogOut size={14} /> Log out
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button onClick={() => onShowAuth("login")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#e4e4e7", fontSize: 12, fontWeight: 600 }}>
+                <LogIn size={14} /> Log In
+              </button>
+              <button onClick={() => onShowAuth("signup")} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 10, background: "linear-gradient(135deg, #a78bfa, #ec4899)", border: "none", color: "#fff", fontSize: 12, fontWeight: 700 }}>
+                <UserPlus size={14} /> Sign Up
+              </button>
+            </div>
+          )}
+        </div>
       </div></header>
 
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "80px 24px", animation: "fadeIn 0.6s ease" }}>
@@ -255,14 +351,39 @@ function App() {
   const [monthLoading, setMonthLoading] = useState(false);
   const chatEnd = useRef(null);
 
-  const loadDrift = () => { setLoading(true); setError(null); get("/api/drift").then(r => { setData(r); setLoading(false); }).catch(e => { setError(e.message); setLoading(false); }); };
+  // ── Auth state ──
+  const [token, setToken] = useState(() => localStorage.getItem("pd_token"));
+  const [user, setUser] = useState(() => { try { return JSON.parse(localStorage.getItem("pd_user")); } catch { return null; } });
+  const [authModal, setAuthModal] = useState(null); // "login" | "signup" | null
+
+  const handleAuth = (data) => {
+    setToken(data.access_token);
+    const u = { name: data.name, email: data.email };
+    setUser(u);
+    localStorage.setItem("pd_token", data.access_token);
+    localStorage.setItem("pd_user", JSON.stringify(u));
+    setAuthModal(null);
+  };
+  const handleLogout = () => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem("pd_token");
+    localStorage.removeItem("pd_user");
+    setPage("landing");
+    setData(null);
+    setAnalysis(null);
+    setSummary("");
+    setMsgs([]);
+  };
+
+  const loadDrift = () => { setLoading(true); setError(null); get("/api/drift", token).then(r => { setData(r); setLoading(false); }).catch(e => { setError(e.message); setLoading(false); }); };
   useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
   const startDashboard = () => { setPage("dashboard"); loadDrift(); };
 
   const runAI = async () => {
     setAiLoading(true);
-    try { const r = await post("/api/analyze", {}); setAnalysis(r.analysis); setSummary(extractSummary(r.analysis)); setChatOpen(false); setMsgs([{ role: "assistant", content: r.analysis }]); }
+    try { const r = await post("/api/analyze", {}, token); setAnalysis(r.analysis); setSummary(extractSummary(r.analysis)); setChatOpen(false); setMsgs([{ role: "assistant", content: r.analysis }]); }
     catch (e) { setSummary("Error: Could not reach AI."); }
     finally { setAiLoading(false); }
   };
@@ -276,7 +397,7 @@ function App() {
       if (idx < 1) { setMonthInsight("Not enough prior data."); setMonthLoading(false); return; }
       const c = trends[idx], p = trends[idx - 1];
       const prompt = `Compare these two months of company spending (3-4 bullet points max). What changed and why?\n\nPrevious (${p.month}): People=$${Math.round(p.people).toLocaleString()}, AI=$${Math.round(p.ai_llm).toLocaleString()}, SaaS=$${Math.round(p.saas_cloud).toLocaleString()}\nCurrent (${c.month}): People=$${Math.round(c.people).toLocaleString()}, AI=$${Math.round(c.ai_llm).toLocaleString()}, SaaS=$${Math.round(c.saas_cloud).toLocaleString()}\n\nBe specific with dollars and percentages.`;
-      const r = await post("/api/chat", { message: prompt, history: [] }); setMonthInsight(r.response);
+      const r = await post("/api/chat", { message: prompt, history: [] }, token); setMonthInsight(r.response);
     } catch (e) { setMonthInsight("Error: Could not reach AI."); }
     finally { setMonthLoading(false); }
   };
@@ -285,13 +406,16 @@ function App() {
     const m = text || input; if (!m.trim() || chatLoading) return; setInput("");
     const history = msgs.map(x => ({ role: x.role === "assistant" ? "model" : "user", content: x.content }));
     setMsgs(p => [...p, { role: "user", content: m }]); setChatLoading(true);
-    try { const r = await post("/api/chat", { message: m, history }); setMsgs(p => [...p, { role: "assistant", content: r.response }]); }
+    try { const r = await post("/api/chat", { message: m, history }, token); setMsgs(p => [...p, { role: "assistant", content: r.response }]); }
     catch (e) { setMsgs(p => [...p, { role: "assistant", content: "Error connecting to AI." }]); }
     finally { setChatLoading(false); }
   };
 
   // ── Landing Page ──
-  if (page === "landing") return <Landing onStart={startDashboard} />;
+  if (page === "landing") return (<>
+    <Landing onStart={startDashboard} user={user} token={token} onShowAuth={setAuthModal} onLogout={handleLogout} />
+    {authModal && <AuthModal mode={authModal} onClose={() => setAuthModal(null)} onAuth={handleAuth} />}
+  </>);
 
   // ── Loading ──
   if (loading) return (
@@ -341,6 +465,13 @@ function App() {
           <span onClick={() => setPage("landing")} style={{ fontSize: 11, color: "#52525b", cursor: "pointer", textDecoration: "underline" }}>← Upload new data</span>
           <div style={{ width: 1, height: 16, background: "rgba(255,255,255,0.06)" }} />
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: "#34d399", animation: "pulse 2s ease infinite" }} /><span style={{ fontSize: 11, color: "#71717a" }}>Live</span></div>
+          {user && <>
+            <div style={{ width: 1, height: 16, background: "rgba(255,255,255,0.06)" }} />
+            <span style={{ fontSize: 12, color: "#a1a1aa", fontWeight: 600 }}>{user.name}</span>
+            <button onClick={handleLogout} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#71717a", fontSize: 11, fontWeight: 600 }}>
+              <LogOut size={12} /> Log out
+            </button>
+          </>}
         </div>
       </div></header>
 

@@ -1,96 +1,61 @@
-# agent.py
-import os
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import List, Optional
-import anthropic
-import json
+import asyncio
+from dedalus_labs import AsyncDedalus, DedalusRunner
+from dotenv import load_dotenv
 
-# Initialize Anthropic client (ensure ANTHROPIC_API_KEY is in your env variables)
-client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+load_dotenv()
 
-router = APIRouter()
+client = AsyncDedalus()
+runner = DedalusRunner(client)
 
-SYSTEM_PROMPT = """
-You are PayDrift, a sharp, no-nonsense CFO advisor. 
-Your goal is to analyze spend drift (unplanned budget variance) and provide actionable, high-impact advice.
+MODEL = "anthropic/claude-sonnet-4-20250514"
 
-Your output must always be in valid Markdown.
-When analyzing data, structure your response exactly like this:
+SYSTEM = """You are PayDrift, an elite financial AI agent. Sharp, direct, data-driven. You speak like a trusted CFO advisor. No fluff. Every sentence must reference specific numbers from the data. Rank recommendations by (savings × ease)."""
 
-### 🚨 Analysis: What Happened & Why
-(A concise, executive summary of the drift. Identify the root cause categories like "AI/LLM Over-usage" or "Contractor Bloat".)
+ANALYZE = """Given this drift data, provide:
 
-### ⚡ Strategic Recommendations
-(Provide exactly 5-7 ranked actions. For each, use a bullet point and include:)
-* **[Action Name]**: Specific instruction. (Est. Savings: $X, Effort: Low/Med/High, Timeline: X weeks)
+## 🔍 Analysis
+2-3 sentences. Be specific with numbers. Identify root causes.
 
-Do not use introductory fluff ("Here is your analysis"). Jump straight into the insights.
-"""
+## 🎯 Top Recommendations
+5 actions ranked by impact. Each: **Action** (1 sentence), **Saves** ($/mo), **Effort** (Easy/Medium/Hard), **Timeline** (Immediate/2 weeks/1 month)
 
-class ChatMessage(BaseModel):
-    role: str
-    content: str
+## ⚡ Quick Win
+Single easiest thing to do TODAY.
 
-class AnalyzeRequest(BaseModel):
-    context: Optional[dict] = None
+## 📊 Risk Alert
+Most dangerous trend if unchecked 6 months. Project the cost."""
 
-class ChatRequest(BaseModel):
-    message: str
-    history: List[ChatMessage]
-    drift_data: dict  # Pass the current dashboard data so Claude has context
 
-def format_drift_for_claude(data):
-    """Converts the raw JSON drift data into a readable text summary for the LLM."""
-    summary = f"Total Monthly Drift: ${data.get('total_monthly_drift', 0)}\n"
-    summary += f"Annualized Impact: ${data.get('annualized_drift', 0)}\n\n"
-    
-    summary += "Category Breakdown:\n"
-    for cat in data.get('categories', []):
-        summary += f"- {cat['category'].upper()}: ${cat['total_drift']} drift ({cat['drift_pct']}%) \n"
-        summary += "  Top Items:\n"
-        for item in cat.get('items', [])[:3]: # Top 3 items per category
-            summary += f"    * {item['item']}: ${item['drift']} drift (From ${item['avg_before']} to ${item['avg_after']})\n"
-            
-    return summary
+async def format_drift_for_ai(drift_data: dict) -> str:
+    lines = ["COMPANY SPEND DRIFT REPORT",
+             f"Total: ${drift_data['total_monthly_drift']:,.0f}/mo (${drift_data['annualized_drift']:,.0f}/yr)", ""]
+    for cat in drift_data.get("categories", []):
+        lines.append(f"{cat['label'].upper()} — {cat['total_drift']:+,.0f}/mo ({cat['drift_pct']:+.1f}%)")
+        for item in cat.get("items", [])[:5]:
+            lines.append(f"  {item['item']}: {item['drift']:+,.0f}/mo ({item['drift_pct']:+.1f}%)")
+        lines.append("")
+    return "\n".join(lines)
 
-@router.post("/analyze")
-async def analyze_drift(data: dict): # Accepting the full data object from frontend for simplicity
-    try:
-        data_text = format_drift_for_claude(data)
-        
-        message = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=1000,
-            temperature=0.1, # Low temp for analytical precision
-            system=SYSTEM_PROMPT,
-            messages=[
-                {"role": "user", "content": f"Here is the current spend drift data:\n{data_text}\n\nAnalyze this and tell me what to do."}
-            ]
-        )
-        return {"markdown": message.content[0].text}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/chat")
-async def chat_agent(req: ChatRequest):
-    try:
-        data_text = format_drift_for_claude(req.drift_data)
-        
-        # Inject context into the latest message or system prompt
-        # We'll prepend context to the conversation for this turn
-        context_message = f"CONTEXT [Current Drift Data]:\n{data_text}\n\nUSER QUESTION: {req.message}"
-        
-        messages = [{"role": m.role, "content": m.content} for m in req.history]
-        messages.append({"role": "user", "content": context_message})
+async def analyze_drift(summary: str) -> str:
+    response = await runner.run(
+        input=f"{SYSTEM}\n\n{ANALYZE}\n\nHere is the drift data:\n\n{summary}",
+        model=MODEL,
+    )
+    return response.final_output
 
-        response = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=500,
-            temperature=0.7,
-            system=SYSTEM_PROMPT,
-            messages=messages
-        )
-        return {"response": response.content[0].text}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+
+async def chat_with_agent(message: str, history: list, summary: str) -> str:
+    # Build context from history
+    context_parts = [f"{SYSTEM}\n\nCurrent company drift data:\n{summary}\n\nConversation so far:"]
+    for h in history:
+        role = "User" if h.get("role") in ("user",) else "Assistant"
+        context_parts.append(f"{role}: {h['content']}")
+    context_parts.append(f"User: {message}")
+    context_parts.append("Answer based on the data. Be specific with numbers.")
+
+    response = await runner.run(
+        input="\n\n".join(context_parts),
+        model=MODEL,
+    )
+    return response.final_output

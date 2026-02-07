@@ -358,7 +358,7 @@ function App() {
             {trends && trends.length > 1 && (
               <select value={selectedMonth} onChange={e => { setSelectedMonth(e.target.value); setMonthInsight(null); }} style={{ padding: "12px 16px", borderRadius: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#e4e4e7", fontSize: 13, fontFamily: "inherit", outline: "none", cursor: "pointer" }}>
                 <option value="" style={{ background: "#18181b" }}>Compare month…</option>
-                {trends.slice(1).map(t => <option key={t.month} value={t.month} style={{ background: "#18181b" }}>{FULL_MO[parseInt(t.month.split("-")[1]) - 1]} {t.month.split("-")[0]}</option>)}
+                {trends.slice(1).reverse().map(t => <option key={t.month} value={t.month} style={{ background: "#18181b" }}>{FULL_MO[parseInt(t.month.split("-")[1]) - 1]} {t.month.split("-")[0]}</option>)}
               </select>
             )}
             {selectedMonth && (

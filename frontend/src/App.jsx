@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
@@ -6,7 +6,8 @@ import {
 import {
   Users, Bot, Cloud, TrendingUp, TrendingDown, AlertTriangle, RefreshCw,
   Loader2, Zap, DollarSign, BarChart3, ArrowUpRight, ArrowDownRight,
-  Sparkles, Send, X, MessageSquare,
+  Sparkles, Send, X, MessageSquare, Upload, CheckCircle, FileSpreadsheet,
+  ArrowRight, Shield, Cpu, Eye,
 } from "lucide-react";
 
 const API = "http://localhost:8000";
@@ -17,6 +18,12 @@ const FULL_MO = ["January","February","March","April","May","June","July","Augus
 
 async function get(p) { const r = await fetch(`${API}${p}`); if (!r.ok) throw new Error(`${r.status}`); return r.json(); }
 async function post(p, b) { const r = await fetch(`${API}${p}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }); if (!r.ok) throw new Error(`${r.status}`); return r.json(); }
+async function upload(file, type) {
+  const fd = new FormData(); fd.append("file", file); fd.append("dataset_type", type);
+  const r = await fetch(`${API}/api/upload?dataset_type=${type}`, { method: "POST", body: fd });
+  if (!r.ok) throw new Error(`Upload failed: ${r.status}`);
+  return r.json();
+}
 
 const CAT = {
   people: { label: "People", desc: "Salaries, overtime & contractors", icon: Users, color: "#a78bfa", key: "people" },
@@ -24,39 +31,24 @@ const CAT = {
   saas_cloud: { label: "SaaS & Cloud", desc: "Subscriptions & infrastructure", icon: Cloud, color: "#38bdf8", key: "saas_cloud" },
 };
 
-const SUGGESTIONS = [
-  "Which department should we focus first?",
-  "What if we cut AI spend by 30%?",
-  "Show me only easy wins",
-  "Explain the AWS cost spike",
-];
+const SUGGESTIONS = ["Which department should we focus first?", "What if we cut AI spend by 30%?", "Show me only easy wins", "Explain the biggest cost spike"];
 
-// Extracts a short summary (first 2 sentences) from the AI analysis
 function extractSummary(text) {
   if (!text) return "";
-  // Find the Analysis section
   const lines = text.split("\n").filter(l => l.trim());
-  let inAnalysis = false;
-  let sentences = [];
-  for (const line of lines) {
-    if (line.match(/analysis/i) && (line.startsWith("#") || line.startsWith("*"))) { inAnalysis = true; continue; }
-    if (inAnalysis && line.startsWith("#")) break;
-    if (inAnalysis && line.trim() && !line.startsWith("*") && !line.startsWith("-")) {
-      sentences.push(line.replace(/\*\*/g, "").trim());
-    }
+  let inA = false, sents = [];
+  for (const l of lines) {
+    if (l.match(/analysis/i) && (l.startsWith("#") || l.startsWith("*"))) { inA = true; continue; }
+    if (inA && l.startsWith("#")) break;
+    if (inA && l.trim() && !l.startsWith("*") && !l.startsWith("-")) sents.push(l.replace(/\*\*/g, "").trim());
   }
-  if (sentences.length === 0) {
-    // Fallback: just grab first 2 non-header lines
-    for (const line of lines) {
-      if (!line.startsWith("#") && !line.startsWith("---") && line.trim().length > 20) {
-        sentences.push(line.replace(/\*\*/g, "").trim());
-        if (sentences.length >= 2) break;
-      }
-    }
-  }
-  return sentences.slice(0, 2).join(" ");
+  if (!sents.length) for (const l of lines) { if (!l.startsWith("#") && l.trim().length > 20) { sents.push(l.replace(/\*\*/g, "").trim()); if (sents.length >= 2) break; } }
+  return sents.slice(0, 2).join(" ");
 }
 
+// ════════════════════════════════════════
+// STYLES
+// ════════════════════════════════════════
 const S = {
   page: { minHeight: "100vh", background: "#09090b", color: "#e4e4e7", fontFamily: "'DM Sans', system-ui, sans-serif" },
   header: { position: "sticky", top: 0, zIndex: 50, background: "rgba(9,9,11,0.85)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.06)" },
@@ -93,28 +85,162 @@ const S = {
   ftIn: { maxWidth: 1100, margin: "0 auto", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 },
   ftTxt: { fontSize: 11, color: "#3f3f46" },
   aiBtn: { display: "inline-flex", alignItems: "center", gap: 10, padding: "14px 28px", borderRadius: 14, background: "linear-gradient(135deg, #a78bfa, #ec4899)", border: "none", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", transition: "all 0.2s", boxShadow: "0 4px 24px rgba(236,72,153,0.3)" },
-  // Summary banner
-  sumBanner: { textAlign: "center", padding: "16px 24px", borderRadius: 16, background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.1)", display: "flex", alignItems: "center", justifyContent: "center", gap: 12 },
-  sumText: { fontSize: 14, color: "#d4d4d8", lineHeight: 1.5, maxWidth: 700 },
-  // Chatbot popup
   fab: { position: "fixed", bottom: 24, right: 24, zIndex: 100, width: 60, height: 60, borderRadius: 20, background: "linear-gradient(135deg, #a78bfa, #ec4899)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 32px rgba(167,139,250,0.4)", transition: "all 0.3s" },
   fabDot: { position: "absolute", top: -2, right: -2, width: 14, height: 14, borderRadius: "50%", background: "#34d399", border: "2px solid #09090b" },
   popup: { position: "fixed", bottom: 96, right: 24, zIndex: 100, width: 420, maxHeight: "70vh", borderRadius: 24, background: "#111113", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 24px 80px rgba(0,0,0,0.7)", display: "flex", flexDirection: "column", overflow: "hidden" },
   popHdr: { padding: "16px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(167,139,250,0.04)" },
   popTitle: { fontSize: 15, fontWeight: 700, color: "#e4e4e7", display: "flex", alignItems: "center", gap: 8 },
-  popClose: { width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", border: "none", background: "rgba(255,255,255,0.05)", color: "#71717a", transition: "all 0.2s" },
+  popClose: { width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", border: "none", background: "rgba(255,255,255,0.05)", color: "#71717a" },
   popBody: { flex: 1, overflowY: "auto", padding: 20 },
   popInput: { padding: "12px 20px", borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", gap: 8 },
   input: { flex: 1, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "10px 14px", color: "#fff", outline: "none", fontSize: 13, fontFamily: "inherit" },
   sendBtn: { width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg, #a78bfa, #ec4899)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   msg: (u) => ({ padding: "10px 14px", borderRadius: u ? "14px 14px 4px 14px" : "14px 14px 14px 4px", background: u ? "rgba(255,255,255,0.05)" : "rgba(167,139,250,0.08)", border: u ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(167,139,250,0.1)", marginBottom: 10, maxWidth: "90%", marginLeft: u ? "auto" : 0, color: u ? "#d4d4d8" : "#e9d5ff", fontSize: 13, lineHeight: 1.6 }),
   msgRole: (u) => ({ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: u ? "#52525b" : "#a78bfa", marginBottom: 4 }),
-  sug: { padding: "7px 12px", borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "#a1a1aa", fontSize: 11, cursor: "pointer", transition: "all 0.2s" },
+  sug: { padding: "7px 12px", borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: "#a1a1aa", fontSize: 11, cursor: "pointer" },
 };
 
+// ════════════════════════════════════════
+// DROP ZONE COMPONENT
+// ════════════════════════════════════════
+function DropZone({ label, icon: Icon, color, file, onFile, desc }) {
+  const [drag, setDrag] = useState(false);
+  const ref = useRef(null);
+  const onDrop = useCallback((e) => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if (f) onFile(f); }, [onFile]);
+  return (
+    <div onDragOver={e => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)} onDrop={onDrop}
+      onClick={() => ref.current?.click()}
+      style={{ borderRadius: 20, border: drag ? `2px dashed ${color}` : file ? `1px solid ${color}40` : "1px solid rgba(255,255,255,0.06)", background: file ? `${color}08` : drag ? `${color}08` : "rgba(255,255,255,0.015)", padding: "32px 24px", textAlign: "center", cursor: "pointer", transition: "all 0.3s" }}>
+      <input ref={ref} type="file" accept=".csv,.xlsx,.xls" style={{ display: "none" }} onChange={e => { if (e.target.files[0]) onFile(e.target.files[0]); }} />
+      <div style={{ width: 48, height: 48, borderRadius: 14, margin: "0 auto 16px", display: "flex", alignItems: "center", justifyContent: "center", background: file ? `${color}20` : "rgba(255,255,255,0.04)" }}>
+        {file ? <CheckCircle size={24} color={color} /> : <Icon size={24} color={color} />}
+      </div>
+      <p style={{ fontSize: 15, fontWeight: 700, color: file ? color : "#e4e4e7", marginBottom: 4 }}>{label}</p>
+      <p style={{ fontSize: 12, color: "#52525b", marginBottom: 8 }}>{desc}</p>
+      {file ? (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          <FileSpreadsheet size={14} color={color} />
+          <span style={{ fontSize: 12, color: color, fontWeight: 600 }}>{file.name}</span>
+        </div>
+      ) : (
+        <p style={{ fontSize: 12, color: "#3f3f46" }}>Drag & drop or click to browse</p>
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════
+// LANDING PAGE
+// ════════════════════════════════════════
+function Landing({ onStart }) {
+  const [files, setFiles] = useState({ payroll: null, ai_costs: null, saas_cloud: null });
+  const [uploading, setUploading] = useState(false);
+  const [useDemo, setUseDemo] = useState(false);
+  const allUploaded = files.payroll && files.ai_costs && files.saas_cloud;
+
+  const handleStart = async () => {
+    if (useDemo) { onStart(); return; }
+    if (!allUploaded) return;
+    setUploading(true);
+    try {
+      await upload(files.payroll, "payroll");
+      await upload(files.ai_costs, "ai_costs");
+      await upload(files.saas_cloud, "saas_cloud");
+      onStart();
+    } catch (e) { alert("Upload failed: " + e.message); setUploading(false); }
+  };
+
+  return (
+    <div style={S.page}>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+      <style>{`@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}button{cursor:pointer;border:none;background:none;font-family:inherit}`}</style>
+
+      {/* Header */}
+      <header style={S.header}><div style={S.headerInner}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={S.logo}><TrendingUp size={16} color="#fff" /></div>
+          <span style={{ fontWeight: 800, fontSize: 17, color: "#fff" }}>PayDrift</span>
+        </div>
+        <button onClick={() => { setUseDemo(true); onStart(); }} style={{ padding: "8px 16px", borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#a1a1aa", fontSize: 12, fontWeight: 600 }}>
+          Try with demo data →
+        </button>
+      </div></header>
+
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "80px 24px", animation: "fadeIn 0.6s ease" }}>
+        {/* Hero */}
+        <div style={{ textAlign: "center", marginBottom: 64 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 16px", borderRadius: 50, background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.12)", marginBottom: 24 }}>
+            <Sparkles size={14} color="#a78bfa" />
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#a78bfa", textTransform: "uppercase", letterSpacing: "0.15em" }}>AI-Powered Spend Intelligence</span>
+          </div>
+          <h1 style={{ fontSize: "clamp(36px, 6vw, 56px)", fontWeight: 800, color: "#fff", lineHeight: 1.1, letterSpacing: "-0.03em", margin: "0 0 20px" }}>
+            Your company is quietly<br /><span style={{ background: "linear-gradient(135deg, #a78bfa, #ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>bleeding money.</span>
+          </h1>
+          <p style={{ fontSize: 18, color: "#71717a", maxWidth: 600, margin: "0 auto", lineHeight: 1.6 }}>
+            PayDrift detects invisible cost drift across payroll, AI tools, and SaaS — then tells you exactly how to fix it.
+          </p>
+        </div>
+
+        {/* Features */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 64 }}>
+          {[
+            { icon: Eye, label: "Detect Drift", desc: "Compare spending month-over-month automatically", color: "#a78bfa" },
+            { icon: Cpu, label: "AI Analysis", desc: "Get CFO-level insights and action items in seconds", color: "#f472b6" },
+            { icon: Shield, label: "Save Money", desc: "Ranked recommendations with estimated savings", color: "#38bdf8" },
+          ].map((f, i) => (
+            <div key={i} style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.04)", background: "rgba(255,255,255,0.015)", padding: "24px 20px", textAlign: "center" }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, margin: "0 auto 12px", display: "flex", alignItems: "center", justifyContent: "center", background: f.color + "12" }}>
+                <f.icon size={20} color={f.color} />
+              </div>
+              <p style={{ fontSize: 14, fontWeight: 700, color: "#e4e4e7", marginBottom: 4 }}>{f.label}</p>
+              <p style={{ fontSize: 12, color: "#52525b", lineHeight: 1.5 }}>{f.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Upload Section */}
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <h2 style={{ fontSize: 24, fontWeight: 800, color: "#fff", marginBottom: 8 }}>Upload your data</h2>
+          <p style={{ fontSize: 14, color: "#52525b" }}>Drop your CSV files below — we'll find the hidden drift.</p>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 32 }}>
+          <DropZone label="Payroll" icon={Users} color="#a78bfa" file={files.payroll} onFile={f => setFiles(p => ({ ...p, payroll: f }))} desc="Salaries, overtime, contractors" />
+          <DropZone label="AI / LLM Costs" icon={Bot} color="#f472b6" file={files.ai_costs} onFile={f => setFiles(p => ({ ...p, ai_costs: f }))} desc="API calls, tokens, model usage" />
+          <DropZone label="SaaS & Cloud" icon={Cloud} color="#38bdf8" file={files.saas_cloud} onFile={f => setFiles(p => ({ ...p, saas_cloud: f }))} desc="Subscriptions, seats, infra" />
+        </div>
+
+        {/* Launch Button */}
+        <div style={{ textAlign: "center" }}>
+          <button onClick={handleStart} disabled={(!allUploaded && !useDemo) || uploading}
+            style={{ ...S.aiBtn, fontSize: 17, padding: "16px 40px", opacity: (allUploaded || useDemo) && !uploading ? 1 : 0.4 }}>
+            {uploading ? <><Loader2 size={20} style={{ animation: "spin 1s linear infinite" }} /> Uploading…</> : <><ArrowRight size={20} /> Analyze My Spend</>}
+          </button>
+          {!allUploaded && (
+            <p style={{ fontSize: 12, color: "#3f3f46", marginTop: 16 }}>
+              Upload all 3 files to continue, or{" "}
+              <span onClick={() => { setUseDemo(true); onStart(); }} style={{ color: "#a78bfa", cursor: "pointer", textDecoration: "underline" }}>try with demo data</span>
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer style={S.ft}><div style={S.ftIn}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ ...S.logo, width: 20, height: 20, borderRadius: 4 }}><TrendingUp size={10} color="#fff" /></div><span style={S.ftTxt}>PayDrift · Spend Drift Intelligence</span></div>
+        <span style={S.ftTxt}>Powered by AI</span>
+      </div></footer>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════
+// MAIN APP
+// ════════════════════════════════════════
 function App() {
+  const [page, setPage] = useState("landing"); // "landing" or "dashboard"
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [tab, setTab] = useState("people");
   const [analysis, setAnalysis] = useState(null);
@@ -129,67 +255,52 @@ function App() {
   const [monthLoading, setMonthLoading] = useState(false);
   const chatEnd = useRef(null);
 
-  const load = () => { setLoading(true); setError(null); get("/api/drift").then(r => { setData(r); setLoading(false); }).catch(e => { setError(e.message); setLoading(false); }); };
-  useEffect(load, []);
+  const loadDrift = () => { setLoading(true); setError(null); get("/api/drift").then(r => { setData(r); setLoading(false); }).catch(e => { setError(e.message); setLoading(false); }); };
   useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
+
+  const startDashboard = () => { setPage("dashboard"); loadDrift(); };
 
   const runAI = async () => {
     setAiLoading(true);
-    try {
-      const r = await post("/api/analyze", {});
-      setAnalysis(r.analysis);
-      setSummary(extractSummary(r.analysis));
-      // Auto-open chatbot with the full analysis as first message
-      setChatOpen(false);
-      setMsgs([{ role: "assistant", content: r.analysis }]);
-    } catch (e) { setSummary("Error: Could not reach AI."); }
+    try { const r = await post("/api/analyze", {}); setAnalysis(r.analysis); setSummary(extractSummary(r.analysis)); setChatOpen(false); setMsgs([{ role: "assistant", content: r.analysis }]); }
+    catch (e) { setSummary("Error: Could not reach AI."); }
     finally { setAiLoading(false); }
   };
 
   const runMonthAnalysis = async () => {
-    if (!selectedMonth || !trends) return;
+    if (!selectedMonth || !data?.monthly_trends) return;
+    const trends = data.monthly_trends;
     setMonthLoading(true);
     try {
       const idx = trends.findIndex(t => t.month === selectedMonth);
-      if (idx < 1) { setMonthInsight("Not enough prior data to compare."); setMonthLoading(false); return; }
-      const curr = trends[idx];
-      const prev = trends[idx - 1];
-      const prompt = `Compare these two months of company spending and give a brief insight (3-4 bullet points max). What changed and why might it matter?
-
-Previous month (${prev.month}): People=${Math.round(prev.people).toLocaleString()}, AI/LLM=${Math.round(prev.ai_llm).toLocaleString()}, SaaS/Cloud=${Math.round(prev.saas_cloud).toLocaleString()}, Total=${Math.round(prev.people + prev.ai_llm + prev.saas_cloud).toLocaleString()}
-
-Current month (${curr.month}): People=${Math.round(curr.people).toLocaleString()}, AI/LLM=${Math.round(curr.ai_llm).toLocaleString()}, SaaS/Cloud=${Math.round(curr.saas_cloud).toLocaleString()}, Total=${Math.round(curr.people + curr.ai_llm + curr.saas_cloud).toLocaleString()}
-
-Be specific with dollar amounts and percentages. Keep it concise.`;
-
-      const r = await post("/api/chat", { message: prompt, history: [] });
-      setMonthInsight(r.response);
+      if (idx < 1) { setMonthInsight("Not enough prior data."); setMonthLoading(false); return; }
+      const c = trends[idx], p = trends[idx - 1];
+      const prompt = `Compare these two months of company spending (3-4 bullet points max). What changed and why?\n\nPrevious (${p.month}): People=$${Math.round(p.people).toLocaleString()}, AI=$${Math.round(p.ai_llm).toLocaleString()}, SaaS=$${Math.round(p.saas_cloud).toLocaleString()}\nCurrent (${c.month}): People=$${Math.round(c.people).toLocaleString()}, AI=$${Math.round(c.ai_llm).toLocaleString()}, SaaS=$${Math.round(c.saas_cloud).toLocaleString()}\n\nBe specific with dollars and percentages.`;
+      const r = await post("/api/chat", { message: prompt, history: [] }); setMonthInsight(r.response);
     } catch (e) { setMonthInsight("Error: Could not reach AI."); }
     finally { setMonthLoading(false); }
   };
 
   const sendMsg = async (text) => {
-    const m = text || input;
-    if (!m.trim() || chatLoading) return;
-    setInput("");
+    const m = text || input; if (!m.trim() || chatLoading) return; setInput("");
     const history = msgs.map(x => ({ role: x.role === "assistant" ? "model" : "user", content: x.content }));
-    setMsgs(p => [...p, { role: "user", content: m }]);
-    setChatLoading(true);
-    try {
-      const r = await post("/api/chat", { message: m, history });
-      setMsgs(p => [...p, { role: "assistant", content: r.response }]);
-    } catch (e) {
-      setMsgs(p => [...p, { role: "assistant", content: "Error connecting to AI." }]);
-    } finally { setChatLoading(false); }
+    setMsgs(p => [...p, { role: "user", content: m }]); setChatLoading(true);
+    try { const r = await post("/api/chat", { message: m, history }); setMsgs(p => [...p, { role: "assistant", content: r.response }]); }
+    catch (e) { setMsgs(p => [...p, { role: "assistant", content: "Error connecting to AI." }]); }
+    finally { setChatLoading(false); }
   };
 
+  // ── Landing Page ──
+  if (page === "landing") return <Landing onStart={startDashboard} />;
+
+  // ── Loading ──
   if (loading) return (
     <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
       <div style={{ textAlign: "center" }}>
         <div style={{ ...S.logo, width: 56, height: 56, borderRadius: 16, margin: "0 auto 20px" }}><BarChart3 size={28} color="#fff" /></div>
         <p style={{ color: "#fff", fontSize: 18, fontWeight: 700 }}>PayDrift</p>
-        <p style={{ color: "#71717a", fontSize: 14, marginTop: 4 }}>Analyzing spend drift…</p>
+        <p style={{ color: "#71717a", fontSize: 14, marginTop: 4 }}>Crunching your numbers…</p>
         <Loader2 size={20} color="#a78bfa" style={{ margin: "20px auto 0", animation: "spin 1s linear infinite" }} />
       </div>
     </div>
@@ -199,17 +310,22 @@ Be specific with dollar amounts and percentages. Keep it concise.`;
     <div style={{ ...S.page, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ textAlign: "center", maxWidth: 320 }}>
         <AlertTriangle size={40} color="#f87171" style={{ margin: "0 auto 16px" }} />
-        <p style={{ color: "#fff", fontSize: 18, fontWeight: 600 }}>Connection Failed</p>
-        <button onClick={load} style={{ marginTop: 16, padding: "8px 20px", background: "#27272a", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, cursor: "pointer" }}><RefreshCw size={14} /> Retry</button>
+        <p style={{ color: "#fff", fontSize: 18, fontWeight: 600 }}>Analysis Failed</p>
+        <p style={{ color: "#71717a", fontSize: 13, marginTop: 8 }}>Backend not reachable.</p>
+        <button onClick={loadDrift} style={{ marginTop: 16, padding: "8px 20px", background: "#27272a", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, cursor: "pointer" }}><RefreshCw size={14} /> Retry</button>
+        <p style={{ marginTop: 12 }}><span onClick={() => setPage("landing")} style={{ color: "#a78bfa", fontSize: 12, cursor: "pointer" }}>← Back to upload</span></p>
       </div>
     </div>
   );
+
+  if (!data) return null;
 
   const { total_monthly_drift: tmd, annualized_drift: ad, categories, monthly_trends: trends } = data;
   const active = categories.find(c => c.category === tab) || categories[0];
   const m = CAT[active.category];
   const top = active.items[0];
 
+  // ── Dashboard ──
   return (
     <div style={S.page}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -217,12 +333,12 @@ Be specific with dollar amounts and percentages. Keep it concise.`;
 
       <header style={S.header}><div style={S.headerInner}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={S.logo}><TrendingUp size={16} color="#fff" /></div>
+          <div onClick={() => setPage("landing")} style={{ ...S.logo, cursor: "pointer" }}><TrendingUp size={16} color="#fff" /></div>
           <span style={{ fontWeight: 800, fontSize: 17, color: "#fff" }}>PayDrift</span>
           <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "rgba(167,139,250,0.15)", color: "#a78bfa", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.15em" }}>Beta</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 11, color: "#52525b", textTransform: "uppercase" }}>Jan–Jun 2025</span>
+          <span onClick={() => setPage("landing")} style={{ fontSize: 11, color: "#52525b", cursor: "pointer", textDecoration: "underline" }}>← Upload new data</span>
           <div style={{ width: 1, height: 16, background: "rgba(255,255,255,0.06)" }} />
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}><div style={{ width: 6, height: 6, borderRadius: "50%", background: "#34d399", animation: "pulse 2s ease infinite" }} /><span style={{ fontSize: 11, color: "#71717a" }}>Live</span></div>
         </div>
@@ -240,7 +356,7 @@ Be specific with dollar amounts and percentages. Keep it concise.`;
               {aiLoading ? "Analyzing…" : analysis ? "✓ Re-Analyze" : "Analyze with AI"}
             </button>
             {trends && trends.length > 1 && (
-              <select value={selectedMonth} onChange={e => { setSelectedMonth(e.target.value); setMonthInsight(null); }} style={{ padding: "12px 16px", borderRadius: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#e4e4e7", fontSize: 13, fontFamily: "inherit", outline: "none", cursor: "pointer", appearance: "none", WebkitAppearance: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center", paddingRight: 36 }}>
+              <select value={selectedMonth} onChange={e => { setSelectedMonth(e.target.value); setMonthInsight(null); }} style={{ padding: "12px 16px", borderRadius: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#e4e4e7", fontSize: 13, fontFamily: "inherit", outline: "none", cursor: "pointer" }}>
                 <option value="" style={{ background: "#18181b" }}>Compare month…</option>
                 {trends.slice(1).map(t => <option key={t.month} value={t.month} style={{ background: "#18181b" }}>{FULL_MO[parseInt(t.month.split("-")[1]) - 1]} {t.month.split("-")[0]}</option>)}
               </select>
@@ -257,7 +373,7 @@ Be specific with dollar amounts and percentages. Keep it concise.`;
           ); })}</div>
         </div></div>
 
-        {/* AI SUMMARY BANNER */}
+        {/* AI SUMMARY */}
         {(summary || aiLoading) && (
           <div style={{ ...S.sec, borderRadius: 20, background: "rgba(167,139,250,0.03)", border: "1px solid rgba(167,139,250,0.1)", padding: 24, position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", top: -60, right: -60, width: 200, height: 200, borderRadius: "50%", opacity: 0.03, filter: "blur(60px)", background: "#a78bfa" }} />
@@ -267,36 +383,24 @@ Be specific with dollar amounts and percentages. Keep it concise.`;
                 <span style={{ fontSize: 15, fontWeight: 700, color: "#e4e4e7" }}>AI Analysis Summary</span>
                 {summary && <button onClick={() => { setAnalysis(null); setSummary(""); }} style={{ marginLeft: "auto", width: 28, height: 28, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.05)", border: "none", cursor: "pointer" }}><X size={14} color="#71717a" /></button>}
               </div>
-              {aiLoading ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#71717a", fontSize: 14 }}>
-                  <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Reading financial signals…
-                </div>
-              ) : (
-                <p style={{ color: "#d4d4d8", fontSize: 14, lineHeight: 1.7, margin: 0 }}>{summary}</p>
-              )}
+              {aiLoading ? <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#71717a", fontSize: 14 }}><Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Reading financial signals…</div>
+              : <p style={{ color: "#d4d4d8", fontSize: 14, lineHeight: 1.7, margin: 0 }}>{summary}</p>}
             </div>
           </div>
         )}
 
-        {/* MONTH COMPARISON INSIGHT */}
+        {/* MONTH INSIGHT */}
         {(monthInsight || monthLoading) && (
           <div style={{ ...S.sec, borderRadius: 20, background: "rgba(56,189,248,0.03)", border: "1px solid rgba(56,189,248,0.1)", padding: 24, position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", top: -60, right: -60, width: 200, height: 200, borderRadius: "50%", opacity: 0.03, filter: "blur(60px)", background: "#38bdf8" }} />
             <div style={{ position: "relative" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
                 <BarChart3 size={18} color="#38bdf8" />
-                <span style={{ fontSize: 15, fontWeight: 700, color: "#e4e4e7" }}>Month-over-Month: {FULL_MO[parseInt(selectedMonth.split("-")[1]) - 1]} {selectedMonth.split("-")[0]}</span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: "#e4e4e7" }}>Month-over-Month: {selectedMonth && FULL_MO[parseInt(selectedMonth.split("-")[1]) - 1]} {selectedMonth?.split("-")[0]}</span>
                 <button onClick={() => { setMonthInsight(null); setSelectedMonth(""); }} style={{ marginLeft: "auto", width: 28, height: 28, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.05)", border: "none", cursor: "pointer" }}><X size={14} color="#71717a" /></button>
               </div>
-              {monthLoading ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#71717a", fontSize: 14 }}>
-                  <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Comparing with previous month…
-                </div>
-              ) : (
-                <div className="md" style={{ color: "#d4d4d8", fontSize: 14, lineHeight: 1.7 }}>
-                  <ReactMarkdown>{monthInsight}</ReactMarkdown>
-                </div>
-              )}
+              {monthLoading ? <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#71717a", fontSize: 14 }}><Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Comparing…</div>
+              : <div className="md" style={{ color: "#d4d4d8", fontSize: 14, lineHeight: 1.7 }}><ReactMarkdown>{monthInsight}</ReactMarkdown></div>}
             </div>
           </div>
         )}
@@ -315,7 +419,7 @@ Be specific with dollar amounts and percentages. Keep it concise.`;
 
         {/* CHART */}
         <div style={{ ...S.chBox, ...S.sec }}>
-          <div style={S.chHdr}><div><p style={{ fontSize: 15, fontWeight: 700, color: "#e4e4e7" }}>Monthly Spend Trend</p><p style={{ fontSize: 12, color: "#52525b", marginTop: 2 }}>{m.label} · 6-month window</p></div>
+          <div style={S.chHdr}><div><p style={{ fontSize: 15, fontWeight: 700, color: "#e4e4e7" }}>Monthly Spend Trend</p><p style={{ fontSize: 12, color: "#52525b", marginTop: 2 }}>{m.label}</p></div>
             <div style={S.tabs}>{categories.map(c => { const cm = CAT[c.category]; return <button key={c.category} onClick={() => setTab(c.category)} style={S.tab(tab === c.category, cm.color)}>{cm.label}</button>; })}</div>
           </div>
           <div style={{ padding: "8px 12px 20px" }}>
@@ -366,18 +470,14 @@ Be specific with dollar amounts and percentages. Keep it concise.`;
 
       <footer style={S.ft}><div style={S.ftIn}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ ...S.logo, width: 20, height: 20, borderRadius: 4 }}><TrendingUp size={10} color="#fff" /></div><span style={S.ftTxt}>PayDrift · Spend Drift Intelligence</span></div>
-        <span style={S.ftTxt}>Data period Jan–Jun 2025</span>
+        <span style={S.ftTxt}>Powered by AI</span>
       </div></footer>
 
-      {/* ══════ FLOATING CHATBOT ══════ */}
-
-      {/* FAB Button */}
+      {/* CHATBOT */}
       <button onClick={() => setChatOpen(!chatOpen)} style={S.fab}>
         {chatOpen ? <X size={24} color="#fff" /> : <MessageSquare size={24} color="#fff" />}
         {analysis && !chatOpen && <div style={S.fabDot} />}
       </button>
-
-      {/* Chat Popup */}
       {chatOpen && (
         <div style={{ ...S.popup, animation: "slideUp 0.3s ease" }}>
           <div style={S.popHdr}>
@@ -388,7 +488,7 @@ Be specific with dollar amounts and percentages. Keep it concise.`;
             {msgs.length === 0 && !analysis && (
               <div style={{ textAlign: "center", padding: "32px 0", color: "#52525b" }}>
                 <Bot size={32} style={{ margin: "0 auto 12px", opacity: 0.5 }} />
-                <p style={{ fontSize: 13 }}>Click "Analyze with AI" first to load insights</p>
+                <p style={{ fontSize: 13 }}>Click "Analyze with AI" first</p>
               </div>
             )}
             {msgs.map((x, i) => (

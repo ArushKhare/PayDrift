@@ -2,9 +2,15 @@ from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from dotenv import load_dotenv
 import os
+
+# passlib 1.7.4 tries to read bcrypt.__about__.__version__ which was removed in bcrypt 4.x
+import bcrypt as _bcrypt
+if not hasattr(_bcrypt, "__about__"):
+    _bcrypt.__about__ = type("_about", (), {"__version__": _bcrypt.__version__})()
+
+from passlib.context import CryptContext
 
 from database import get_user_by_email
 

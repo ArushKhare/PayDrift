@@ -1,13 +1,11 @@
-import asyncio
-from dedalus_labs import AsyncDedalus, DedalusRunner
+from anthropic import AsyncAnthropic
 from dotenv import load_dotenv
 
 load_dotenv()
 
-client = AsyncDedalus()
-runner = DedalusRunner(client)
+client = AsyncAnthropic()
 
-MODEL = "anthropic/claude-opus-4-6"
+MODEL = "claude-haiku-4-5"
 
 SYSTEM = """You are PayDrift, an elite financial AI agent. Sharp, direct, data-driven. You speak like a trusted CFO advisor. No fluff. Every sentence must reference specific numbers from the data. Rank recommendations by (savings × ease)."""
 
@@ -38,24 +36,28 @@ async def format_drift_for_ai(drift_data: dict) -> str:
 
 
 async def analyze_drift(summary: str) -> str:
-    response = await runner.run(
-        input=f"{SYSTEM}\n\n{ANALYZE}\n\nHere is the drift data:\n\n{summary}",
+    response = await client.messages.create(
         model=MODEL,
+        max_tokens=1024,
+        system=SYSTEM,
+        messages=[
+            {"role": "user", "content": f"{ANALYZE}\n\nHere is the drift data:\n\n{summary}"}
+        ],
     )
-    return response.final_output
+    return response.content[0].text
 
 
 async def chat_with_agent(message: str, history: list, summary: str) -> str:
-    # Build context from history
-    context_parts = [f"{SYSTEM}\n\nCurrent company drift data:\n{summary}\n\nConversation so far:"]
+    messages = []
     for h in history:
-        role = "User" if h.get("role") in ("user",) else "Assistant"
-        context_parts.append(f"{role}: {h['content']}")
-    context_parts.append(f"User: {message}")
-    context_parts.append("Answer based on the data. Be specific with numbers.")
+        role = "user" if h.get("role") == "user" else "assistant"
+        messages.append({"role": role, "content": h["content"]})
+    messages.append({"role": "user", "content": message})
 
-    response = await runner.run(
-        input="\n\n".join(context_parts),
+    response = await client.messages.create(
         model=MODEL,
+        max_tokens=1024,
+        system=f"{SYSTEM}\n\nCurrent company drift data:\n{summary}\n\nAnswer based on the data. Be specific with numbers.",
+        messages=messages,
     )
-    return response.final_output
+    return response.content[0].text

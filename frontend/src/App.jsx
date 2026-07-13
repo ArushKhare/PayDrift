@@ -10,7 +10,7 @@ import {
   ArrowRight, Shield, Cpu, Eye, LogIn, UserPlus, LogOut, Mail, Lock, User,
 } from "lucide-react";
 
-const API = window.location.hostname === "localhost" ? "http://localhost:8000" : "https://tartanhacks-2026-project-production.up.railway.app";
+const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const fmt = (n) => "$" + Math.abs(Math.round(n)).toLocaleString();
 const fmtPct = (n) => (n >= 0 ? "+" : "") + n.toFixed(1) + "%";
 const MO = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];

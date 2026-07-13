@@ -1,42 +1,64 @@
-import aiosqlite
+import asyncio
+import json
 import os
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "paydrift.db")
+import firebase_admin
+from firebase_admin import credentials, firestore
+from google.api_core.exceptions import AlreadyExists
+
+USERS_COLLECTION = "users"
+
+_db = None
+
+
+def _init_firebase():
+    global _db
+    if _db is not None:
+        return
+
+    try:
+        app = firebase_admin.get_app()
+    except ValueError:
+        cred_json = os.getenv("FIREBASE_CREDENTIALS_JSON")
+        cred_path = os.getenv("FIREBASE_CREDENTIALS_PATH")
+        if cred_json:
+            cred = credentials.Certificate(json.loads(cred_json))
+        elif cred_path:
+            cred = credentials.Certificate(cred_path)
+        else:
+            raise RuntimeError(
+                "Missing Firebase credentials: set FIREBASE_CREDENTIALS_JSON "
+                "(service account JSON as a string) or FIREBASE_CREDENTIALS_PATH "
+                "(path to the service account JSON file)."
+            )
+        app = firebase_admin.initialize_app(cred)
+
+    _db = firestore.client(app)
 
 
 async def init_db():
-    """Create the users table if it doesn't exist."""
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                email TEXT UNIQUE NOT NULL,
-                name TEXT NOT NULL,
-                hashed_password TEXT NOT NULL
-            )
-        """)
-        await db.commit()
+    """Initialize the Firebase app and Firestore client. Firestore is schemaless — no table to create."""
+    await asyncio.to_thread(_init_firebase)
 
 
 async def get_user_by_email(email: str) -> dict | None:
     """Return user dict or None."""
-    async with aiosqlite.connect(DB_PATH) as db:
-        db.row_factory = aiosqlite.Row
-        cursor = await db.execute(
-            "SELECT email, name, hashed_password FROM users WHERE email = ?",
-            (email,),
-        )
-        row = await cursor.fetchone()
-        if row is None:
+    def _get():
+        doc = _db.collection(USERS_COLLECTION).document(email).get()
+        if not doc.exists:
             return None
-        return {"email": row["email"], "name": row["name"], "hashed_password": row["hashed_password"]}
+        data = doc.to_dict()
+        return {"email": email, "name": data["name"], "hashed_password": data["hashed_password"]}
+
+    return await asyncio.to_thread(_get)
 
 
 async def create_user(email: str, name: str, hashed_password: str):
-    """Insert a new user. Raises IntegrityError if email already exists."""
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute(
-            "INSERT INTO users (email, name, hashed_password) VALUES (?, ?, ?)",
-            (email, name, hashed_password),
-        )
-        await db.commit()
+    """Create a new user document, keyed by email. Raises AlreadyExists if the email is taken."""
+    def _create():
+        _db.collection(USERS_COLLECTION).document(email).create({
+            "name": name,
+            "hashed_password": hashed_password,
+        })
+
+    await asyncio.to_thread(_create)

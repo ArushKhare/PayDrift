@@ -5,11 +5,11 @@ from io import BytesIO
 
 from models import (
     RawDataResponse, DriftResponse, UploadResponse,
-    ChatRequest, ChatResponse,
+    ChatRequest, ChatResponse, LeaksResponse,
     UserRegister, UserLogin, TokenResponse,
 )
 from demo_data import load_all, df_preview
-from drift import analyze_all
+from drift import analyze_all, find_leaks
 from agent import format_drift_for_ai, analyze_drift, chat_with_agent
 from auth import (
     hash_password, verify_password,
@@ -84,6 +84,15 @@ def get_drift(user: dict = Depends(get_current_user)):
     if not datasets:
         raise HTTPException(status_code=500, detail="Demo data not loaded")
     return analyze_all(datasets)
+
+
+# --- GET /api/leaks ---
+# Deterministic money-leak detection (no AI) — seat waste, AI spikes, overtime creep
+@app.get("/api/leaks", response_model=LeaksResponse)
+def get_leaks(user: dict = Depends(get_current_user)):
+    if not datasets:
+        raise HTTPException(status_code=500, detail="Demo data not loaded")
+    return find_leaks(datasets)
 
 
 # --- POST /api/upload ---

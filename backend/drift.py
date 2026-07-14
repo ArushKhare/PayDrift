@@ -29,6 +29,103 @@ def utilization_flag(df, date_col, total_col, active_col, service_col, threshold
     return latest[[service_col, total_col, active_col, "utilization", "flagged"]]
 
 
+def find_leaks(datasets: dict[str, pd.DataFrame] = None) -> dict:
+    """
+    Detect concrete, dollar-backed money leaks across the 3 datasets.
+    Fully deterministic (no AI). Returns {total_annual_waste, leaks: [...]}.
+
+    Detectors:
+      1. Seat waste  — SaaS tools with active/total utilization < 0.3
+      2. AI spikes   — team/service AI cost that drifted up sharply
+      3. Overtime    — departments whose overtime crept up month-over-month
+    """
+    if datasets is None:
+        datasets = load_all()
+
+    payroll = datasets["payroll"]
+    ai_costs = datasets["ai_costs"]
+    saas = datasets["saas_cloud"]
+
+    leaks = []
+
+    # --- 1. Seat waste (reuse utilization_flag) ---
+    util = utilization_flag(saas, "month", "total_seats", "active_seats", "service")
+    latest_saas = saas[saas["month"] == saas["month"].max()]
+    cost_by_service = dict(zip(latest_saas["service"], latest_saas["monthly_cost"]))
+    for _, row in util[util["flagged"]].iterrows():
+        service = row["service"]
+        cost = float(cost_by_service.get(service, 0))
+        total = int(row["total_seats"])
+        active = int(row["active_seats"])
+        monthly_waste = cost * (1 - row["utilization"])
+        if monthly_waste < 1:
+            continue
+        leaks.append({
+            "id": f"seat-{service}",
+            "category": "saas_cloud",
+            "title": f"{service} — {active} of {total} seats active",
+            "detail": f"Only {row['utilization'] * 100:.0f}% of seats used. "
+                      f"Right-sizing this plan frees up about {_money(monthly_waste)}/mo.",
+            "monthly_waste": round(monthly_waste, 2),
+            "annual_waste": round(monthly_waste * 12, 2),
+        })
+
+    # --- 2. AI cost spikes ---
+    ai_drift = calculate_drift(ai_costs, "month", "cost", ["team", "service"])
+    for _, row in ai_drift.iterrows():
+        drift = row["drift"]
+        pct = row["drift_pct"]
+        if drift <= 0:
+            continue
+        if not (drift >= 200 or (pd.notna(pct) and pct >= 40)):
+            continue
+        pct_txt = f" (+{pct:.0f}%)" if pd.notna(pct) else ""
+        leaks.append({
+            "id": f"ai-{row['team']}-{row['service']}",
+            "category": "ai_llm",
+            "title": f"{row['team']} · {row['service']} up {_money(drift)}/mo",
+            "detail": f"Recent 3-month average is {_money(drift)}/mo{pct_txt} above prior. "
+                      f"Check for runaway pipelines or experiments left running.",
+            "monthly_waste": round(drift, 2),
+            "annual_waste": round(drift * 12, 2),
+        })
+
+    # --- 3. Overtime creep ---
+    ot_drift = calculate_drift(payroll, "month", "overtime", ["department"])
+    for _, row in ot_drift.iterrows():
+        drift = row["drift"]
+        pct = row["drift_pct"]
+        if drift < 100:
+            continue
+        pct_txt = f" (+{pct:.0f}%)" if pd.notna(pct) else ""
+        leaks.append({
+            "id": f"ot-{row['department']}",
+            "category": "people",
+            "title": f"{row['department']} overtime +{_money(drift)}/mo",
+            "detail": f"Average monthly overtime rose {_money(drift)}{pct_txt} vs prior. "
+                      f"May signal under-staffing or scope creep.",
+            "monthly_waste": round(drift, 2),
+            "annual_waste": round(drift * 12, 2),
+        })
+
+    leaks.sort(key=lambda x: x["monthly_waste"], reverse=True)
+
+    # Severity is relative to the biggest leak in the set, so it stays
+    # meaningful whether the data is small demo numbers or a real upload.
+    top = leaks[0]["monthly_waste"] if leaks else 0
+    for l in leaks:
+        ratio = l["monthly_waste"] / top if top else 0
+        l["severity"] = "high" if ratio >= 0.6 else "medium" if ratio >= 0.3 else "low"
+
+    total_annual_waste = round(sum(l["annual_waste"] for l in leaks), 2)
+
+    return {"total_annual_waste": total_annual_waste, "leaks": leaks}
+
+
+def _money(n: float) -> str:
+    return "$" + f"{abs(round(n)):,}"
+
+
 def analyze_all(datasets: dict[str, pd.DataFrame] = None) -> dict:
     """
     Run drift calculations on all 3 datasets.

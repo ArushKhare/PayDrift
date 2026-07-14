@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
+  AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, ReferenceLine,
 } from "recharts";
 import {
   Users, Bot, Cloud, TrendingUp, TrendingDown, AlertTriangle, RefreshCw,
   Loader2, Zap, DollarSign, BarChart3, ArrowUpRight, ArrowDownRight,
   Sparkles, Send, X, MessageSquare, Upload, CheckCircle, FileSpreadsheet,
   ArrowRight, Shield, Cpu, Eye, LogIn, UserPlus, LogOut, Mail, Lock, User,
+  Droplets, SlidersHorizontal, Target,
 } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -333,9 +334,199 @@ function Landing({ onStart, user, token, onShowAuth, onLogout }) {
 // ════════════════════════════════════════
 // MAIN APP
 // ════════════════════════════════════════
+// ════════════════════════════════════════
+// MONEY LEAKS — deterministic waste feed
+// ════════════════════════════════════════
+const SEV = { high: "#f87171", medium: "#fbbf24", low: "#38bdf8" };
+
+function MoneyLeaks({ leaks }) {
+  if (!leaks || !leaks.leaks?.length) return null;
+  return (
+    <div style={{ ...S.sec, ...S.tBox }}>
+      <div style={S.tHdr}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Droplets size={18} color="#f87171" />
+          <div>
+            <p style={{ fontSize: 15, fontWeight: 700, color: "#e4e4e7" }}>Money Leaks</p>
+            <p style={{ fontSize: 12, color: "#52525b", marginTop: 2 }}>Concrete waste we found — no AI required</p>
+          </div>
+        </div>
+        <span style={{ ...S.badge, color: "#fca5a5", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.15)" }}>{fmt(leaks.total_annual_waste)}/yr recoverable</span>
+      </div>
+      <div style={{ padding: "8px 16px 20px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 12 }}>
+        {leaks.leaks.map(l => {
+          const cm = CAT[l.category]; const I = cm?.icon || AlertTriangle; const c = cm?.color || "#f87171";
+          return (
+            <div key={l.id} style={{ display: "flex", gap: 12, padding: 16, borderRadius: 14, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: c + "15" }}><I size={16} color={c} /></div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: SEV[l.severity], flexShrink: 0 }} title={l.severity} />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#e4e4e7" }}>{l.title}</span>
+                </div>
+                <p style={{ fontSize: 12, color: "#a1a1aa", lineHeight: 1.5, margin: 0 }}>{l.detail}</p>
+                <p style={{ fontSize: 12, marginTop: 8, fontFamily: "'DM Mono'", fontWeight: 700, color: "#f87171" }}>{fmt(l.annual_waste)}/yr <span style={{ color: "#52525b", fontWeight: 400 }}>· {fmt(l.monthly_waste)}/mo</span></p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════
+// SCENARIO SIMULATOR — live client-side "what if"
+// ════════════════════════════════════════
+function ScenarioSimulator({ trends, leaks }) {
+  const [ai, setAi] = useState(30);
+  const [seats, setSeats] = useState(50);
+  const [ot, setOt] = useState(40);
+  if (!trends?.length) return null;
+  const latest = trends[trends.length - 1];
+  const sumBy = (pre) => (leaks?.leaks || []).filter(l => l.id.startsWith(pre)).reduce((s, l) => s + l.monthly_waste, 0);
+  const seatWaste = sumBy("seat-"), otWaste = sumBy("ot-");
+  const rows = [
+    { label: "Cut AI / LLM spend", val: ai, set: setAi, color: CAT.ai_llm.color, save: latest.ai_llm * ai / 100, cap: latest.ai_llm },
+    { label: "Reclaim unused SaaS seats", val: seats, set: setSeats, color: CAT.saas_cloud.color, save: seatWaste * seats / 100, cap: seatWaste },
+    { label: "Cap overtime growth", val: ot, set: setOt, color: CAT.people.color, save: otWaste * ot / 100, cap: otWaste },
+  ];
+  const annual = rows.reduce((s, r) => s + r.save, 0) * 12;
+  return (
+    <div style={{ ...S.sec, ...S.chBox }}>
+      <div style={S.chHdr}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <SlidersHorizontal size={18} color="#34d399" />
+          <div><p style={{ fontSize: 15, fontWeight: 700, color: "#e4e4e7" }}>Scenario Simulator</p><p style={{ fontSize: 12, color: "#52525b", marginTop: 2 }}>Drag to model savings — updates instantly</p></div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <p style={{ fontSize: 30, fontWeight: 800, fontFamily: "'DM Mono', monospace", color: "#34d399", lineHeight: 1 }}>{fmt(annual)}</p>
+          <p style={{ fontSize: 11, color: "#52525b", marginTop: 3 }}>projected savings / yr</p>
+        </div>
+      </div>
+      <div style={{ padding: "12px 24px 28px", display: "flex", flexDirection: "column", gap: 22 }}>
+        {rows.map((r, i) => (
+          <div key={i} style={{ opacity: r.cap <= 0 ? 0.4 : 1 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 9 }}>
+              <span style={{ fontSize: 13, color: "#d4d4d8", fontWeight: 600 }}>{r.label}</span>
+              <span style={{ fontSize: 13, fontFamily: "'DM Mono', monospace", fontWeight: 700, color: r.color }}>{r.val}% → {fmt(r.save * 12)}/yr</span>
+            </div>
+            <input type="range" min="0" max="100" value={r.val} onChange={e => r.set(+e.target.value)} disabled={r.cap <= 0} style={{ width: "100%", accentColor: r.color, cursor: r.cap <= 0 ? "not-allowed" : "pointer" }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════
+// SPEND FORECAST — linear projection chart
+// ════════════════════════════════════════
+const addMonths = (ym, k) => { let [y, m] = ym.split("-").map(Number); m += k; y += Math.floor((m - 1) / 12); m = ((m - 1) % 12) + 1; return `${y}-${String(m).padStart(2, "0")}`; };
+
+function Forecast({ trends }) {
+  const [tab, setTab] = useState("people");
+  const [horizon, setHorizon] = useState(6);
+  if (!trends || trends.length < 2) return null;
+  const cm = CAT[tab];
+  const ys = trends.map(t => t[tab]);
+  const n = ys.length;
+  const mx = (n - 1) / 2;
+  const my = ys.reduce((a, b) => a + b, 0) / n;
+  let num = 0, den = 0;
+  for (let i = 0; i < n; i++) { num += (i - mx) * (ys[i] - my); den += (i - mx) ** 2; }
+  const slope = den ? num / den : 0;
+  const intercept = my - slope * mx;
+  const at = (i) => Math.max(0, intercept + slope * i);
+  const lastMonth = trends[n - 1].month;
+  const hist = trends.map((t, i) => ({ month: t.month, actual: t[tab], projected: i === n - 1 ? t[tab] : null }));
+  const proj = Array.from({ length: horizon }, (_, k) => ({ month: addMonths(lastMonth, k + 1), actual: null, projected: at(n + k) }));
+  const combined = [...hist, ...proj];
+  const endVal = at(n - 1 + horizon);
+  const endMonth = addMonths(lastMonth, horizon);
+  const [ey, em] = endMonth.split("-");
+  const up = slope >= 0;
+  return (
+    <div style={{ ...S.sec, ...S.chBox }}>
+      <div style={S.chHdr}>
+        <div><p style={{ fontSize: 15, fontWeight: 700, color: "#e4e4e7" }}>Spend Forecast</p><p style={{ fontSize: 12, color: "#52525b", marginTop: 2 }}>{cm.label} · projected {horizon} months</p></div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={S.tabs}>{Object.values(CAT).map(c => <button key={c.key} onClick={() => setTab(c.key)} style={S.tab(tab === c.key, c.color)}>{c.label}</button>)}</div>
+          <div style={S.tabs}>{[6, 12].map(h => <button key={h} onClick={() => setHorizon(h)} style={S.tab(horizon === h, "#a78bfa")}>{h}mo</button>)}</div>
+        </div>
+      </div>
+      <div style={{ padding: "8px 12px 8px" }}>
+        <ResponsiveContainer width="100%" height={300}>
+          <AreaChart data={combined} margin={{ top: 15, right: 15, left: 5, bottom: 0 }}>
+            <defs><linearGradient id="fg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={cm.color} stopOpacity={0.25} /><stop offset="100%" stopColor={cm.color} stopOpacity={0} /></linearGradient></defs>
+            <CartesianGrid stroke="rgba(255,255,255,0.04)" strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="month" tick={{ fill: "#52525b", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => MO[parseInt(v.split("-")[1]) - 1] || v} />
+            <YAxis tick={{ fill: "#52525b", fontSize: 11, fontFamily: "'DM Mono'" }} axisLine={false} tickLine={false} width={60} tickFormatter={v => "$" + (v >= 1e6 ? (v / 1e6).toFixed(1) + "M" : v >= 1000 ? Math.round(v / 1000) + "k" : Math.round(v))} />
+            <Tooltip contentStyle={{ background: "#141416", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, fontSize: 12, fontFamily: "'DM Mono'", boxShadow: "0 20px 60px rgba(0,0,0,0.6)", padding: "12px 16px" }} labelStyle={{ color: "#71717a", marginBottom: 6, fontSize: 11 }} formatter={(v, name) => [v == null ? "—" : "$" + Math.round(v).toLocaleString(), name === "projected" ? "Projected" : cm.label]} labelFormatter={v => { const p = v.split("-"); return FULL_MO[parseInt(p[1]) - 1] + " " + p[0]; }} cursor={{ stroke: cm.color, strokeWidth: 1, strokeOpacity: 0.2 }} />
+            <ReferenceLine x={lastMonth} stroke="rgba(255,255,255,0.18)" strokeDasharray="4 4" label={{ value: "today", fill: "#52525b", fontSize: 10, position: "insideTopRight" }} />
+            <Area type="monotone" dataKey="actual" stroke={cm.color} strokeWidth={2.5} fill="url(#fg)" dot={false} connectNulls={false} activeDot={{ r: 5, fill: cm.color, stroke: "#09090b", strokeWidth: 3 }} />
+            <Area type="monotone" dataKey="projected" stroke={cm.color} strokeWidth={2} strokeDasharray="6 4" fill="none" dot={false} connectNulls={false} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+      <div style={{ padding: "0 24px 20px" }}>
+        <p style={{ fontSize: 13, color: "#a1a1aa" }}>At this rate, <span style={{ color: cm.color, fontWeight: 700 }}>{cm.label}</span> {up ? "climbs to" : "eases to"} <span style={{ fontFamily: "'DM Mono'", fontWeight: 700, color: up ? "#f87171" : "#34d399" }}>{fmt(endVal)}/mo</span> by {FULL_MO[parseInt(em) - 1]} {ey}.</p>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════
+// SAVINGS TRACKER — actionable leaks, localStorage
+// ════════════════════════════════════════
+function SavingsTracker({ leaks, user }) {
+  const key = `pd_savings_${user?.email || "demo"}`;
+  const items = leaks?.leaks || [];
+  const [status, setStatus] = useState({});
+  useEffect(() => { try { setStatus(JSON.parse(localStorage.getItem(key)) || {}); } catch { setStatus({}); } }, [key]);
+  const setItem = (id, val) => setStatus(p => { const n = { ...p, [id]: p[id] === val ? undefined : val }; localStorage.setItem(key, JSON.stringify(n)); return n; });
+  if (!items.length) return null;
+  const totalAnnual = items.reduce((s, l) => s + l.annual_waste, 0);
+  const resolvedAnnual = items.filter(l => status[l.id] === "resolved").reduce((s, l) => s + l.annual_waste, 0);
+  const active = items.filter(l => status[l.id] !== "ignored");
+  const pct = totalAnnual ? (resolvedAnnual / totalAnnual) * 100 : 0;
+  return (
+    <div style={{ ...S.sec, ...S.tBox }}>
+      <div style={S.tHdr}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Target size={18} color="#34d399" />
+          <div><p style={{ fontSize: 15, fontWeight: 700, color: "#e4e4e7" }}>Savings Tracker</p><p style={{ fontSize: 12, color: "#52525b", marginTop: 2 }}>Mark leaks resolved to bank realized savings</p></div>
+        </div>
+        <p style={{ fontSize: 13, color: "#71717a" }}>Realized <span style={{ color: "#34d399", fontFamily: "'DM Mono'", fontWeight: 700 }}>{fmt(resolvedAnnual)}</span> / {fmt(totalAnnual)} per yr</p>
+      </div>
+      <div style={{ padding: "0 24px 14px" }}>
+        <div style={{ width: "100%", height: 8, background: "rgba(255,255,255,0.04)", borderRadius: 4, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${pct}%`, borderRadius: 4, transition: "width 0.5s ease", background: "linear-gradient(90deg, #34d399, #10b981)" }} />
+        </div>
+      </div>
+      <div style={{ padding: "4px 16px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
+        {active.map(l => {
+          const resolved = status[l.id] === "resolved";
+          return (
+            <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 12, background: resolved ? "rgba(52,211,153,0.06)" : "rgba(255,255,255,0.02)", border: `1px solid ${resolved ? "rgba(52,211,153,0.2)" : "rgba(255,255,255,0.05)"}` }}>
+              <button onClick={() => setItem(l.id, "resolved")} title="Mark resolved" style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {resolved ? <CheckCircle size={18} color="#34d399" /> : <div style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid #3f3f46" }} />}
+              </button>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: resolved ? "#71717a" : "#e4e4e7", textDecoration: resolved ? "line-through" : "none" }}>{l.title}</span>
+              <span style={{ fontSize: 12, fontFamily: "'DM Mono'", fontWeight: 700, color: resolved ? "#34d399" : "#a1a1aa", flexShrink: 0 }}>{fmt(l.annual_waste)}/yr</span>
+              <button onClick={() => setItem(l.id, "ignored")} title="Dismiss" style={{ flexShrink: 0, width: 26, height: 26, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.03)" }}><X size={13} color="#52525b" /></button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [page, setPage] = useState("landing"); // "landing" or "dashboard"
   const [data, setData] = useState(null);
+  const [leaks, setLeaks] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [tab, setTab] = useState("people");
@@ -371,12 +562,19 @@ function App() {
     localStorage.removeItem("pd_user");
     setPage("landing");
     setData(null);
+    setLeaks(null);
     setAnalysis(null);
     setSummary("");
     setMsgs([]);
   };
 
-  const loadDrift = () => { setLoading(true); setError(null); get("/api/drift", token).then(r => { setData(r); setLoading(false); }).catch(e => { setError(e.message); setLoading(false); }); };
+  const loadDrift = () => {
+    setLoading(true); setError(null);
+    get("/api/drift", token).then(r => {
+      setData(r); setLoading(false);
+      get("/api/leaks", token).then(setLeaks).catch(() => setLeaks({ leaks: [], total_annual_waste: 0 }));
+    }).catch(e => { setError(e.message); setLoading(false); });
+  };
   useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
   const startDashboard = () => { setPage("dashboard"); loadDrift(); };
@@ -551,6 +749,12 @@ function App() {
           </div>);
         })}</div>
 
+        {/* MONEY LEAKS */}
+        <MoneyLeaks leaks={leaks} />
+
+        {/* SAVINGS TRACKER */}
+        <SavingsTracker leaks={leaks} user={user} />
+
         {/* CHART */}
         <div style={{ ...S.chBox, ...S.sec }}>
           <div style={S.chHdr}><div><p style={{ fontSize: 15, fontWeight: 700, color: "#e4e4e7" }}>Monthly Spend Trend</p><p style={{ fontSize: 12, color: "#52525b", marginTop: 2 }}>{m.label}</p></div>
@@ -569,6 +773,12 @@ function App() {
             </ResponsiveContainer>
           </div>
         </div>
+
+        {/* SPEND FORECAST */}
+        <Forecast trends={trends} />
+
+        {/* SCENARIO SIMULATOR */}
+        <ScenarioSimulator trends={trends} leaks={leaks} />
 
         {/* TOP DRIFTER */}
         {top && top.drift > 0 && (

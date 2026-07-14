@@ -38,6 +38,22 @@ class DriftResponse(BaseModel):
     monthly_trends: list[TrendPoint]
 
 
+# --- Money leak (one deterministic waste finding) ---
+class Leak(BaseModel):
+    id: str
+    category: str            # "people" | "ai_llm" | "saas_cloud"
+    title: str
+    detail: str
+    monthly_waste: float
+    annual_waste: float
+    severity: str            # "high" | "medium" | "low"
+
+
+class LeaksResponse(BaseModel):
+    total_annual_waste: float
+    leaks: list[Leak]
+
+
 # --- Raw data response (Phase 1: before drift calc exists) ---
 class RawDataResponse(BaseModel):
     payroll_rows: int
